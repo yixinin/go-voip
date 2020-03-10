@@ -111,7 +111,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer) {
 		case <-s.stopWs:
 			return
 		default:
-			var buf = make([]byte, 2+8+2048)
+			var buf = make([]byte, 2+8+1024)
 			_, err := reader.Read(buf)
 			if err != nil {
 				log.Println("read buffer error:", err)
@@ -129,6 +129,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer) {
 				log.Println("room not exsist", rid)
 				return
 			}
+			// log.Println(len(p.Data))
 			r.PktChan <- p
 		}
 	}

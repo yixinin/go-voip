@@ -6,7 +6,7 @@ import numpy as np
 
 frameType = 2  # ws frame type 1=text 2=binary
 dataType = 1   # live data type 1=audio 2=video
-BUFSIZE = 2048+2+8
+BUFSIZE = 1024+2+8
 
 
 def Recv(ws):

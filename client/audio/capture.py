@@ -3,7 +3,7 @@ import wave
 import numpy as np
 from socket import *
 
-BUFSIZE = 1024
+BUFSIZE = 512
 frameType = 2  # ws frame type 1=text 2=binary
 dataType = 1   # live data type 1=audio 2=video
 
@@ -37,10 +37,14 @@ def Capture(tcpClient):
         # continue
         timeStamp = ts.to_bytes(length=8, byteorder="big", signed=False)
         data = bytes(head+timeStamp+body)
-        tcpClient.send(data)
+       # print("send before", data.__len__())
+        # n = tcpClient.send(data)
+        tcpClient.sendall(data)
+        # print(n)
         ts += 1
         # print("header:", data[:8+2])
         # print(body.__len__(), data.__len__())
+    print("end")
     stream.stop_stream()
     stream.close()
     p.terminate()
