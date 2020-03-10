@@ -1,4 +1,5 @@
-from websocket import create_connection
+# from websocket import create_connection
+import websocket
 import pyaudio
 import wave
 import numpy as np
@@ -11,19 +12,22 @@ BUFSIZE = 2048+2+8
 def Recv(ws):
     CHUNK = 512*2
     FORMAT = pyaudio.paInt16
-    CHANNELS = 2
+    CHANNELS = 1
     RATE = 48000
 
     p = pyaudio.PyAudio()
     stream = p.open(rate=RATE, channels=CHANNELS, format=FORMAT, output=True)
+
+    data = bytes()
     while 1:
-        data = ws.recv()
-        # print(data)
-        if data.__len__() == BUFSIZE:
-            stream.write(data[2+8:])
-        else:
-            if data.__len__() > 0:
-                print(data.__len__())
+        buf = (data + ws.recv())
+        siz = buf.__len__()
+        while siz >= BUFSIZE:
+            nbuf = buf[BUFSIZE:]
+            stream.write(buf[8+2:BUFSIZE])
+            buf = nbuf
+            siz = nbuf.__len__()
+        data = buf
 
     # 停止数据流
     stream.stop_stream()
@@ -44,12 +48,10 @@ if __name__ == "__main__":
     x2 = rid.to_bytes(length=8, byteorder='big', signed=True)
     header = bytes(h1+h2+token+x2)
 
-    HOST = '127.0.0.1'
-    PORT = 9901
-    # BUFSIZE = 4096
-    ADDR = (HOST, PORT)
+    addr = "ws://localhost:9902/live"
 
-    ws = create_connection("ws://localhost:9902/live")
+    # websocket.enableTrace(True)
+    ws = websocket.create_connection(addr)
     ws.send_binary(header)
 
     Recv(ws)

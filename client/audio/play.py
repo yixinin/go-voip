@@ -16,17 +16,17 @@ def Recv(tcpClient):
 
     p = pyaudio.PyAudio()
     stream = p.open(rate=RATE, channels=CHANNELS, format=FORMAT, output=True)
+
+    data = bytes()
     while 1:
-        data = tcpClient.recv(BUFSIZE)
-        if data.__len__() == BUFSIZE:
-            # dataType = data[1]
-            # uid = int.from_bytes(data[2:8+2], byteorder="big", signed=True)
-            # print("dataType: ", dataType)
-            # print("from uid: ", uid)
-            stream.write(data[2+8:])
-        else:
-            if data.__len__() > 0:
-                print(data.__len__())
+        buf = bytes(data+tcpClient.recv(4096))
+        siz = buf.__len__()
+        while siz >= BUFSIZE:
+            nbuf = buf[BUFSIZE:]
+            stream.write(buf[8+2:BUFSIZE])
+            buf = nbuf
+            siz = nbuf.__len__()
+        data = buf
 
     # 停止数据流
     stream.stop_stream()

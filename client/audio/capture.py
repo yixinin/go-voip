@@ -13,42 +13,34 @@ def Capture(tcpClient):
     FORMAT = pyaudio.paInt16
     CHANNELS = 1
     RATE = 48000
-    RECORD_SECONDS = 5
-    WAVE_OUTPUT_FILENAME = "cache.wav"
+    # RECORD_SECONDS = 5
+    # WAVE_OUTPUT_FILENAME = "cache.wav"
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT,
                     channels=CHANNELS,
                     rate=RATE,
                     input=True,
                     frames_per_buffer=CHUNK)
+    # playStream = p.open(rate=RATE, channels=CHANNELS,
+    #                     format=FORMAT, output=True)
     print("开始缓存录音")
     # frames = []
 
     h1 = frameType.to_bytes(length=1, byteorder='big', signed=True)
     h2 = dataType.to_bytes(length=1, byteorder='big', signed=True)
+    head = bytes(h1+h2)
+    print("head: ", head)
     ts = 0
-    while (True):
-        # print('begin ')
-        # for i in range(0, 100):
+    while 1:
         body = stream.read(BUFSIZE)
-        # frames.append(data)
+        # playStream.write(body)
+        # continue
         timeStamp = ts.to_bytes(length=8, byteorder="big", signed=False)
-        data = bytes(h1+h2+timeStamp+body)
+        data = bytes(head+timeStamp+body)
         tcpClient.send(data)
         ts += 1
-        print(data.__len__())
-
-        # print(data.__len__())
-
-        # recvData = tcpClient.recv(4096)
-        # print(recvData.__len__())
-        # audio_data = np.fromstring(data, dtype=np.short)
-        # large_sample_count = np.sum(audio_data > 800)
-        # temp = np.max(audio_data)
-        # if temp > 800:
-        #     print("检测到信号")
-        #     print('当前阈值：', temp)
-        #     break
+        # print("header:", data[:8+2])
+        # print(body.__len__(), data.__len__())
     stream.stop_stream()
     stream.close()
     p.terminate()

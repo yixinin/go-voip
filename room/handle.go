@@ -66,6 +66,7 @@ FOR:
 			//推送
 			for _, u := range r.Users {
 				if u != nil && u.Writer != nil {
+					// log.Println(len(p.Data))
 					u.Writer.Write(p.Data)
 				}
 			}
