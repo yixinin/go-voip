@@ -23,10 +23,9 @@ def Recv(ws):
         buf = (data + ws.recv())
         siz = buf.__len__()
         while siz >= BUFSIZE:
-            nbuf = buf[BUFSIZE:]
             stream.write(buf[8+2:BUFSIZE])
-            buf = nbuf
-            siz = nbuf.__len__()
+            buf = buf[BUFSIZE:]
+            siz = buf.__len__()
         data = buf
 
     # 停止数据流
@@ -48,7 +47,7 @@ if __name__ == "__main__":
     x2 = rid.to_bytes(length=8, byteorder='big', signed=True)
     header = bytes(h1+h2+token+x2)
 
-    addr = "ws://localhost:9902/live"
+    addr = "ws://10.0.0.23:9902/live"
 
     # websocket.enableTrace(True)
     ws = websocket.create_connection(addr)

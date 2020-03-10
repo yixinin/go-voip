@@ -11,7 +11,7 @@ BUFSIZE = 2048+2+8
 def Recv(tcpClient):
     CHUNK = 512*2
     FORMAT = pyaudio.paInt16
-    CHANNELS = 2
+    CHANNELS = 1
     RATE = 48000
 
     p = pyaudio.PyAudio()
@@ -19,13 +19,16 @@ def Recv(tcpClient):
 
     data = bytes()
     while 1:
-        buf = bytes(data+tcpClient.recv(4096))
+        # data = tcpClient.recv(BUFSIZE)
+        # stream.write(data[8+2:])
+        # print(data.__len__())
+
+        buf = (data + tcpClient.recv(4096))
         siz = buf.__len__()
         while siz >= BUFSIZE:
-            nbuf = buf[BUFSIZE:]
             stream.write(buf[8+2:BUFSIZE])
-            buf = nbuf
-            siz = nbuf.__len__()
+            buf = buf[BUFSIZE:]
+            siz = buf.__len__()
         data = buf
 
     # 停止数据流
@@ -47,7 +50,7 @@ if __name__ == "__main__":
     x2 = rid.to_bytes(length=8, byteorder='big', signed=True)
     header = bytes(h1+h2+token+x2)
 
-    HOST = '127.0.0.1'
+    HOST = '10.0.0.23'
     PORT = 9901
     # BUFSIZE = 4096
     ADDR = (HOST, PORT)
