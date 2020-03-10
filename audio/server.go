@@ -3,12 +3,10 @@ package audio
 import (
 	"bufio"
 	"fmt"
-	"live/utils"
 	"log"
 	"net"
-	"strconv"
 	"sync"
-	"sync/atomic"
+	"voip/utils"
 
 	cmap "github.com/orcaman/concurrent-map"
 )
@@ -17,14 +15,37 @@ type Server struct {
 	sync.Mutex
 	listener net.Listener
 	conns    map[int64]cmap.ConcurrentMap
+	msg      map[int64]*Message
 	uids     map[int64]*uint64
+	online   map[int64]bool
+}
+
+type Message struct {
+	ch  chan Buffer
+	uid int64
+}
+
+type Buffer struct {
+	buf []byte
 }
 
 func NewServer() *Server {
 	return &Server{
-		conns: make(map[int64]cmap.ConcurrentMap, 10),
-		uids:  make(map[int64]*uint64, 10),
+		conns:  make(map[int64]cmap.ConcurrentMap, 10),
+		uids:   make(map[int64]*uint64, 10),
+		msg:    make(map[int64]*Message, 2),
+		online: make(map[int64]bool, 10),
 	}
+}
+
+func (s *Server) Setonline(uid int64, online bool) {
+	s.Lock()
+	defer s.Unlock()
+	s.online[uid] = online
+}
+
+func (s *Server) GetOnline(uid int64) bool {
+	return s.online[uid]
 }
 
 func (s *Server) AddUser(uids ...int64) {
@@ -33,6 +54,10 @@ func (s *Server) AddUser(uids ...int64) {
 	for _, uid := range uids {
 		if _, ok := s.conns[uid]; !ok {
 			s.conns[uid] = cmap.New()
+			s.msg[uid] = &Message{
+				ch:  make(chan Buffer, 1),
+				uid: uid,
+			}
 			z := uint64(0)
 			s.uids[uid] = &z
 			fmt.Println("add user", uid)
@@ -47,6 +72,8 @@ func (s *Server) DelUser(uids ...int64) {
 		if _, ok := s.conns[uid]; ok {
 			delete(s.conns, uid)
 			delete(s.uids, uid)
+			close(s.msg[uid].ch)
+			delete(s.msg, uid)
 			fmt.Println("del user", uid)
 		}
 	}
@@ -89,49 +116,53 @@ func (s *Server) handleConn(conn net.Conn) {
 	}
 
 	//读取
-	userid := utils.BytesToInt64(header[:8])
-	callUserid := utils.BytesToInt64(header[8:])
-	s.AddUser(userid, callUserid)
+	uid := utils.BytesToInt64(header[:8])
+	target := utils.BytesToInt64(header[8:])
+	s.AddUser(uid, target)
+	s.Setonline(uid, true)
 
 	//发送音频流
-	go s.handleWriter(writer, callUserid)
+	fmt.Printf("uid:%d, target:%d\n", uid, target)
+	go s.handleWriter(writer, uid, target)
 	//接受音频流
-	s.handleReader(reader, userid)
+	s.handleReader(reader, uid, target)
 
 }
 
-func (s *Server) handleWriter(writer *bufio.Writer, target int64) {
+func (s *Server) handleWriter(writer *bufio.Writer, uid, target int64) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("rtmp serve panic: ", r)
 		}
 	}()
-	for t := range s.conns[target].IterBuffered() {
-		buf := t.Val.([]byte)
-		n, err := writer.Write(buf)
-		if err != nil {
-			log.Println(n, err)
-		}
+	// fmt.Println("handle writer:", target)
+	msg := s.msg[target].ch
+	for {
+		buffer := <-msg
+		writer.Write(buffer.buf)
 	}
 }
 
-func (s *Server) handleReader(reader *bufio.Reader, target int64) {
+func (s *Server) handleReader(reader *bufio.Reader, uid, target int64) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Println("rtmp serve panic: ", r)
 		}
 	}()
 	for {
+
 		var buf = make([]byte, 1024*4)
 		_, err := reader.Read(buf)
 		if err != nil {
 			log.Fatal(err)
 			return
 		}
+		if s.GetOnline(target) {
+			s.msg[uid].ch <- Buffer{buf: buf}
+		}
 
-		fmt.Println("recieved buf", len(buf))
+		// var key = atomic.AddUint64(s.uids[target], 1)
+		// s.conns[target].Set(strconv.FormatUint(key, 10), buf)
 
-		var key = atomic.AddUint64(s.uids[target], 1)
-		s.conns[target].Set(strconv.FormatUint(key, 10), buf)
 	}
 }

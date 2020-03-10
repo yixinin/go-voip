@@ -1,23 +1,27 @@
 package main
 
 import (
-	"live/audio"
+	"flag"
 	"log"
-	"net"
+	"os"
+	"voip/config"
+	"voip/server"
 )
 
-//tcp server 服务端代码
+var (
+	configPath = flag.String("conf", `C:\Users\yixin\go\voip\config\app.yaml`, "-conf=xxx")
+)
 
 func main() {
-	//定义一个tcp断点
-	var tcpAddr *net.TCPAddr
-	//通过ResolveTCPAddr实例一个具体的tcp断点
-	tcpAddr, _ = net.ResolveTCPAddr("tcp", "0.0.0.0:9999")
-	//打开一个tcp断点监听
-	tcpListener, _ := net.ListenTCP("tcp", tcpAddr)
-	var server = audio.NewServer()
-	err := server.Serve(tcpListener)
+	var b byte = 0x1
+	// strings.
+	log.Printf("%08b & %08b = %08b", b, 0xf, b&0xf)
+	log.Printf("1=%08b, 2=%08b", 1, 2)
+	var conf, err = config.ParseConfig(*configPath)
 	if err != nil {
-		log.Fatal("serve error", err)
+		log.Fatalf("load config error: %v", err)
+		os.Exit(0)
 	}
+	var server = server.NewServer(conf)
+	server.Serve()
 }
