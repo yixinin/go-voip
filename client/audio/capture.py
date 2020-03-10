@@ -3,7 +3,7 @@ import wave
 import numpy as np
 from socket import *
 
-BUFSIZE = 4096+2
+BUFSIZE = 1024
 frameType = 2  # ws frame type 1=text 2=binary
 dataType = 1   # live data type 1=audio 2=video
 
@@ -11,7 +11,7 @@ dataType = 1   # live data type 1=audio 2=video
 def Capture(tcpClient):
     CHUNK = 512*2
     FORMAT = pyaudio.paInt16
-    CHANNELS = 2
+    CHANNELS = 1
     RATE = 48000
     RECORD_SECONDS = 5
     WAVE_OUTPUT_FILENAME = "cache.wav"
@@ -26,13 +26,19 @@ def Capture(tcpClient):
 
     h1 = frameType.to_bytes(length=1, byteorder='big', signed=True)
     h2 = dataType.to_bytes(length=1, byteorder='big', signed=True)
-
+    ts = 0
     while (True):
-        print('begin ')
+        # print('begin ')
         # for i in range(0, 100):
-        data = stream.read(BUFSIZE)
+        body = stream.read(BUFSIZE)
         # frames.append(data)
-        tcpClient.send(bytes(h1+h2+data))
+        timeStamp = ts.to_bytes(length=8, byteorder="big", signed=False)
+        data = bytes(h1+h2+timeStamp+body)
+        tcpClient.send(data)
+        ts += 1
+        print(data.__len__())
+
+        # print(data.__len__())
 
         # recvData = tcpClient.recv(4096)
         # print(recvData.__len__())

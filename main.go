@@ -3,7 +3,10 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"strings"
 	"voip/config"
 	"voip/server"
 )
@@ -24,4 +27,22 @@ func main() {
 	}
 	var server = server.NewServer(conf)
 	server.Serve()
+
+	var body = `{"RoomId":10240,"Users":[{"Uid":102,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000000"},{"Uid":104,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000001"}]}`
+	http.DefaultClient.Post("http://localhost:9902/createRoom", "application/json", strings.NewReader(body))
+	//监听退出信号
+	c := make(chan os.Signal)
+	//监听所有信号
+	signal.Notify(c)
+
+	for {
+		select {
+		case sig := <-c:
+			switch sig {
+			case os.Interrupt:
+				server.Stop <- true
+			}
+			return
+		}
+	}
 }

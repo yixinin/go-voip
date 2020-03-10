@@ -105,19 +105,31 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer) {
 
 	//读取数据
 	for {
-		var buf = make([]byte, 1024*4)
-		_, err := reader.Read(buf)
-		if err != nil {
-			log.Println("read buffer error:", err)
-			continue
-		}
-
-		var p = av.NewPacket(buf[1], buf, uid)
-		r, ok := s.Rooms[rid]
-		if !ok {
-			log.Println("room not exsist", rid)
+		select {
+		case <-s.stopTcp:
 			return
+		case <-s.stopWs:
+			return
+		default:
+			var buf = make([]byte, 2+8+2048)
+			_, err := reader.Read(buf)
+			if err != nil {
+				log.Println("read buffer error:", err)
+				return
+			}
+
+			var p = av.NewPacket(buf, uid)
+			uidBytes := utils.Int64ToBytes(uid)
+			// for i := 2; i < 8+2; i++ {
+			// 	p.Data[i] = uidBytes[i-2]
+			// }
+			copy(p.Data[2:8+2], uidBytes)
+			r, ok := s.Rooms[rid]
+			if !ok {
+				log.Println("room not exsist", rid)
+				return
+			}
+			r.PktChan <- p
 		}
-		r.PktChan <- p
 	}
 }

@@ -1,4 +1,4 @@
-from socket import *
+from websocket import create_connection
 import pyaudio
 import wave
 import numpy as np
@@ -8,7 +8,7 @@ dataType = 1   # live data type 1=audio 2=video
 BUFSIZE = 2048+2+8
 
 
-def Recv(tcpClient):
+def Recv(ws):
     CHUNK = 512*2
     FORMAT = pyaudio.paInt16
     CHANNELS = 2
@@ -17,12 +17,9 @@ def Recv(tcpClient):
     p = pyaudio.PyAudio()
     stream = p.open(rate=RATE, channels=CHANNELS, format=FORMAT, output=True)
     while 1:
-        data = tcpClient.recv(BUFSIZE)
+        data = ws.recv()
+        # print(data)
         if data.__len__() == BUFSIZE:
-            # dataType = data[1]
-            # uid = int.from_bytes(data[2:8+2], byteorder="big", signed=True)
-            # print("dataType: ", dataType)
-            # print("from uid: ", uid)
             stream.write(data[2+8:])
         else:
             if data.__len__() > 0:
@@ -52,10 +49,7 @@ if __name__ == "__main__":
     # BUFSIZE = 4096
     ADDR = (HOST, PORT)
 
-    tcpClient = socket(AF_INET, SOCK_STREAM)
-    tcpClient.connect(ADDR)
-    tcpClient.send(header)
+    ws = create_connection("ws://localhost:9902/live")
+    ws.send_binary(header)
 
-    Recv(tcpClient)
-
-    tcpClient.close()
+    Recv(ws)

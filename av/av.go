@@ -1,5 +1,7 @@
 package av
 
+import "voip/utils"
+
 const (
 	_ byte = iota
 	AudioType
@@ -7,19 +9,20 @@ const (
 )
 
 type Packet struct {
-	isAudio bool
-	isVideo bool
-	Uid     int64
-	// TimeStamp uint32
-	Data []byte
+	isAudio   bool
+	isVideo   bool
+	Uid       int64
+	TimeStamp uint64
+	Data      []byte
 }
 
-func NewPacket(dataType byte, data []byte, uid int64) *Packet {
+func NewPacket(data []byte, uid int64) *Packet {
 	return &Packet{
-		isAudio: dataType == AudioType,
-		isVideo: dataType == VideoType,
-		Data:    data,
-		Uid:     uid,
+		isAudio:   data[1] == AudioType,
+		isVideo:   data[1] == VideoType,
+		TimeStamp: utils.BytesToUint64(data[2 : 8+2]),
+		Data:      data,
+		Uid:       uid,
 	}
 }
 

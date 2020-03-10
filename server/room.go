@@ -22,7 +22,10 @@ func (s *Server) handleCreateRoom() {
 FOR:
 	for {
 		select {
-		case <-s.stop:
+		case <-s.Stop:
+			for _, r := range s.Rooms {
+				r.Stop <- true
+			}
 			return
 		case rid := <-s.closeRoomChan:
 			if _, ok := s.Rooms[rid]; ok {

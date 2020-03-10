@@ -2,7 +2,6 @@ package room
 
 import (
 	"log"
-	"voip/utils"
 )
 
 // func (r *Room) handleUserAction() {
@@ -33,11 +32,16 @@ func (r *Room) handlePacket() {
 		}
 	}()
 
+FOR:
 	for {
 		select {
-		case <-r.stop:
+		case <-r.Stop:
 			return
 		case p := <-r.PktChan:
+			if p == nil || len(p.Data) == 0 {
+				log.Println("empty data, packet is nil?", p == nil)
+				continue FOR
+			}
 			if p.IsAudio() {
 				//音频处理
 			} else {
@@ -46,17 +50,24 @@ func (r *Room) handlePacket() {
 				}
 			}
 
-			var data = make([]byte, len(p.Data)+8)
-			copy(data[2+8:], p.Data[2:])
-			uidBytes := utils.Int64ToBytes(p.Uid)
-			copy(data[2:8], uidBytes)
-			copy(data[:2], p.Data[:2])
+			// var data = make([]byte, len(p.Data)+8)
+			// copy(data, p.Data)
+			// uidBytes := utils.Int64ToBytes(p.Uid)
+			// copy(data[2:8+2], uidBytes)
+			// copy(data[:2], p.Data[:2])
+
+			// // var fromUid = utils.BytesToInt64(data[2 : 8+2])
+			// var dataType = data[1]
+			// var frameType = data[0]
+
+			// log.Printf("dataType = %d", p.Data[0])
+
+			// log.Println(len(p.Data))
 			//推送
 			for _, u := range r.Users {
-				// if u != nil && u.Writer != nil && u.Writer.Alive() {
-				// 	u.Writer.Write(&p)
-				// }
-				u.Writer.Write(data)
+				if u != nil && u.Writer != nil {
+					u.Writer.Write(p.Data)
+				}
 			}
 		}
 	}

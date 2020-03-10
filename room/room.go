@@ -13,14 +13,14 @@ type Room struct {
 	PktChan chan *av.Packet
 	Users   map[int64]*user.User
 
-	stop chan bool
+	Stop chan bool
 }
 
 func NewRoom(id int64, us []*user.User) *Room {
 	var room = &Room{
 		RoomId:  id,
 		Users:   make(map[int64]*user.User, len(us)),
-		stop:    make(chan bool),
+		Stop:    make(chan bool),
 		PktChan: make(chan *av.Packet, 10),
 	}
 	for _, u := range us {

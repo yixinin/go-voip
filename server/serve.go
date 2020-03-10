@@ -7,17 +7,20 @@ import (
 	"net/http"
 )
 
+const ()
+
 func (s *Server) Serve() error {
 
-	switch s.conf.Protocol {
-	case "tcp":
-		go s.ServeSocket()
-	default:
-		log.Fatalln("unsurrport protocol")
-		return fmt.Errorf("unsurrport protocol")
+	for _, v := range s.conf.Protocol {
+		if v == ProtocolTCP {
+			go s.ServeSocket()
+		}
+		if v == ProtocolTCP {
+			s.ServeWs()
+		}
 	}
 	go s.ServeHttp()
-	s.handleCreateRoom()
+	go s.handleCreateRoom()
 	return nil
 }
 
@@ -41,20 +44,23 @@ func (s *Server) ServeSocket() {
 	}
 }
 
+func (s *Server) ServeWs() {
+	var addr = fmt.Sprintf("%s:%s", s.conf.ListenIp, s.conf.HttpPort)
+	http.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			log.Print("upgrade:", err)
+			return
+		}
+		s.handleWs(conn)
+	})
+	log.Println("listen ws in", addr+"/live")
+}
+
 func (s *Server) ServeHttp() {
 	var addr = fmt.Sprintf("%s:%s", s.conf.ListenIp, s.conf.HttpPort)
 	http.HandleFunc("/createRoom", s.handleRpc)
-	if s.conf.Protocol == "ws" {
-		http.HandleFunc("/live", func(w http.ResponseWriter, r *http.Request) {
-			conn, err := upgrader.Upgrade(w, r, nil)
-			if err != nil {
-				log.Print("upgrade:", err)
-				return
-			}
-			s.handleWs(conn)
-		})
 
-	}
-	log.Println("listen http/ws in", addr)
+	log.Println("listen http in", addr)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

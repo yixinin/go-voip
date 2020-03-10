@@ -13,3 +13,7 @@ func Int64ToBytes(i int64) []byte {
 	binary.BigEndian.PutUint64(buf, uint64(i))
 	return buf
 }
+
+func BytesToUint64(buf []byte) uint64 {
+	return binary.BigEndian.Uint64(buf)
+}
