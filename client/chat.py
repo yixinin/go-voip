@@ -134,7 +134,7 @@ def conn(user):
 
 
 if __name__ == '__main__':
-    user = 2
+    user = 1
     tcpClient = conn(user)
 
     # th_handle = threading.Thread(target=handle_buffer, args=(tcpClient,))
@@ -146,9 +146,10 @@ if __name__ == '__main__':
     th_video.start()
 
     # th_handle.join()
-    th_video.join()
-    th_audio.join()
 
     handle_buffer(tcpClient)
+
+    th_video.join()
+    th_audio.join()
 
     tcpClient.close()
