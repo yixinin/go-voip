@@ -60,6 +60,8 @@ func (r *Room) Broadcast(p *av.Packet) {
 	r.RLock()
 	defer r.RUnlock()
 
+	log.Printf("header:%v, uid:%d", p.Data[:6], p.Uid)
+
 	for _, u := range r.Users {
 		if u != nil &&
 			u.Uid != p.Uid && //不给自己发

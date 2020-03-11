@@ -79,6 +79,7 @@ def handle_tcp(tcp):
             body = (body+sub_body)
             read += sub_body.__len__()
         if header[1] == const.AUDIO_TYPE:
+            print(body.__len__(), body_length)
             play_audio(stream, body)
         elif header[1] == const.VIDEO_TYPE:
             play_video(body)
@@ -89,7 +90,9 @@ def handle_tcp(tcp):
 
 
 def play_audio(stream, body):
-    print(body.__len__())
+    if body.__len__() == 0:
+        return
+
     stream.write(body)
 
 
