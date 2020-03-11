@@ -25,7 +25,7 @@ def capture_video(tcpClient):
         tcpClient.sendall(buf)
         # print("send video buf", buf.__len__(), "\n")
 
-    cap.release()sxzddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd(7)
+    cap.release()
 
 
 def capture_audio(tcpClient):
@@ -135,13 +135,6 @@ def conn(user):
 
     tcpClient.send(loginBuf)
     return tcpClient
-
-
-class Packet(Object):
-    def __init__(self, buf):
-        self.is_video = buf[1] == const.VIDEO_TYPE
-        self.is_audio = buf[1] == const.AUDIO_TYPE
-        self.body = buf[2+4:]
 
 
 if __name__ == '__main__':
