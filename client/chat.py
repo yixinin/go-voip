@@ -108,19 +108,23 @@ def handle_buffer(tcpClient):
                         break
 
                 # 读取剩余
-                if body.__len__() > length+2+4:  # 不止包含头部
-                    header = body[length: length + 2+4]
+                leftBody = body[length:]
+                if leftBody.__len__() > const.HEADER_LENGTH:  # 不止包含头部
+                    header = leftBody[:const.HEADER_LENGTH]
                     # length = util.get_body_length()
 
                     # 如果不是一个完整包 合并到下一次
-                    if body.__len__() < length + util.get_body_length() + 2+4:
-                        preBuf = body[length:]
+                    if leftBody.__len__() < const.HEADER_LENGTH + util.get_body_length(header):
+                        preBuf = leftBody
                         read = 0  # 跳出while循环
                     else:
-                        length = util.get_body_length()
+                        length = util.get_body_length(header)
                         print(header, length, "2----")
-                        body = body[length+2+4:]
+                        body = leftBody[const.HEADER_LENGTH:]
                         read = body.__len__()
+                else:
+                    preBuf = leftBody
+                    read = 0  # 跳出while循环
     print("end recv buf")
 
 
@@ -138,7 +142,7 @@ def conn(user):
 
 
 if __name__ == '__main__':
-    user = 1
+    user = 2
     tcpClient = conn(user)
 
     # th_handle = threading.Thread(target=handle_buffer, args=(tcpClient,))
@@ -146,7 +150,7 @@ if __name__ == '__main__':
     th_video = threading.Thread(target=capture_video, args=(tcpClient,))
 
     # th_handle.start()
-    # th_audio.start()
+    th_audio.start()
     # th_video.start()
 
     # th_handle.join()

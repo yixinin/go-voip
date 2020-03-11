@@ -126,7 +126,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 			}
 			length := utils.BytesToUint32(header[2:])
 
-			log.Println(header)
+			// log.Println(header)
 
 			if length == 0 {
 				log.Printf("header length:%d, body expect length:%d", n1, length)
