@@ -1,8 +1,0 @@
-@host="http://127.0.0.1:9902/createRoom"
-
-
-POST http://127.0.0.1:9902/createRoom HTTP/1.1
-Content-Type: application/json
-User-Agent: iPhone
-
-{"RoomId":10240,"Users":[{"Uid":102,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000000"},{"Uid":104,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000001"}]}
