@@ -9,6 +9,7 @@ import (
 	"strings"
 	"voip/config"
 	"voip/server"
+	"voip/utils"
 )
 
 var (
@@ -24,8 +25,8 @@ func main() {
 	var server = server.NewServer(conf)
 	server.Serve()
 
-	var body = `{"RoomId":10240,"Users":[{"Uid":102,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000000"},{"Uid":104,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000001"}]}`
-	http.DefaultClient.Post("http://localhost:9902/createRoom", "application/json", strings.NewReader(body))
+	createRoom()
+	showIP()
 	//监听退出信号
 	c := make(chan os.Signal)
 	//监听所有信号
@@ -41,4 +42,13 @@ func main() {
 			return
 		}
 	}
+}
+
+func showIP() {
+	log.Println("本机IP:", utils.IPAddress())
+}
+
+func createRoom() {
+	var body = `{"RoomId":10240,"Users":[{"Uid":102,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000000"},{"Uid":104,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000001"}]}`
+	http.DefaultClient.Post("http://localhost:9902/createRoom", "application/json", strings.NewReader(body))
 }
