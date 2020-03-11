@@ -5,3 +5,4 @@ live
 go.sum
 voip
 *.pyc
+*__pycache__*

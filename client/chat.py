@@ -12,6 +12,7 @@ def capture_video(tcpClient):
     while True:
         ret, frame = cap.read()
         if not ret:
+            print("no video device")
             return
         img = cv2.imencode(".jpg", frame)[1]
         body = np.array(img).tobytes()
@@ -21,7 +22,7 @@ def capture_video(tcpClient):
         buf = (header+body)
 
         tcpClient.sendall(buf)
-        # print("send video buf", buf.__len__(), "\n")
+        print("send video buf", buf.__len__(), "\n")
 
     cap.release()
 
@@ -42,7 +43,7 @@ def capture_audio(tcpClient):
         buf = bytes(header + body)
 
         tcpClient.sendall(buf)
-        # print("send audio buf", buf.__len__(), "\n")
+        print("send audio buf", buf.__len__(), "\n")
 
     stream.stop_stream()
     stream.close()
@@ -80,7 +81,7 @@ def handle_buffer(tcpClient):
         if read == length:
             if header[1] == const.AUDIO_TYPE:
                 play_audio(stream, body)
-            elif header[i] == const.VIDEO_TYPE:
+            elif header[1] == const.VIDEO_TYPE:
                 play_video(body)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -100,7 +101,7 @@ def handle_buffer(tcpClient):
                     body = (body+subBody)
             if header[1] == const.AUDIO_TYPE:
                 play_audio(stream, body)
-            elif header[i] == const.VIDEO_TYPE:
+            elif header[1] == const.VIDEO_TYPE:
                 play_video(body)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -110,7 +111,7 @@ def handle_buffer(tcpClient):
             while read > length:
                 if header[1] == const.AUDIO_TYPE:
                     play_audio(stream, body)
-                elif header[i] == const.VIDEO_TYPE:
+                elif header[1] == const.VIDEO_TYPE:
                     play_video(body)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
@@ -142,22 +143,22 @@ def conn(user):
 
 
 if __name__ == '__main__':
-    user = 1
+    user = 2
     tcpClient = conn(user)
 
     # th_handle = threading.Thread(target=handle_buffer, args=(tcpClient,))
     th_audio = threading.Thread(target=capture_audio, args=(tcpClient,))
-    th_video = threading.Thread(target=capture_video, args=(tcpClient,))
+    # th_video = threading.Thread(target=capture_video, args=(tcpClient,))
 
     # th_handle.start()
     th_audio.start()
-    th_video.start()
+    # th_video.start()
 
     # th_handle.join()
 
     handle_buffer(tcpClient)
 
-    th_video.join()
+    # th_video.join()
     th_audio.join()
 
     tcpClient.close()
