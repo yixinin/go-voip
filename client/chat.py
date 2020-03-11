@@ -10,6 +10,10 @@ import util
 
 def capture_video(tcpClient):
     cap = cv2.VideoCapture(0)
+    cap.set(3, const.VIDEO_WIDTH)
+    cap.set(4, const.VIDEO_HEIGHT)
+    cap.set(7, const.VIDEO_FPS)
+
     while True:
         ret, frame = cap.read()
         if not ret:
@@ -83,8 +87,8 @@ def handle_tcp(tcp):
             play_audio(stream, body)
         elif header[1] == const.VIDEO_TYPE:
             play_video(body)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
     print("end recv buf")
 

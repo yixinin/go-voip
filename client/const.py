@@ -25,6 +25,10 @@ TOKEN2 = b'00000000000000000000000000000001'
 
 HEADER_LENGTH = 6
 
+VIDEO_WIDTH = 320
+VIDEO_HEIGHT = 320
+VIDEO_FPS = 24
+
 
 def get_user_header(i):
     header = bytes()
