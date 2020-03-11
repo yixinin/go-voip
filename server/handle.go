@@ -111,19 +111,27 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer) {
 		case <-s.stopWs:
 			return
 		default:
-			var buf = make([]byte, 2+8+1024)
-			_, err := reader.Read(buf)
+			//数据包格式 1+1+2+8 frameType + dataType + dataLength + timeStamp
+			var header = make([]byte, 4+8)
+			_, err := reader.Read(header)
+			length := utils.BytesToUint16(header[2:4])
+
+			var body = make([]byte, length)
+			// var buf = make([]byte, 2+8+9600)
+			_, err = reader.Read(body)
 			if err != nil {
 				log.Println("read buffer error:", err)
 				return
 			}
 
+			var buf = make([]byte, len(header)+len(body))
+			copy(buf[:len(header)], header)
+			copy(buf[len(header):], body)
+
 			var p = av.NewPacket(buf, uid)
 			uidBytes := utils.Int64ToBytes(uid)
-			// for i := 2; i < 8+2; i++ {
-			// 	p.Data[i] = uidBytes[i-2]
-			// }
-			copy(p.Data[2:8+2], uidBytes)
+
+			copy(p.Data[4:8+4], uidBytes)
 			r, ok := s.Rooms[rid]
 			if !ok {
 				log.Println("room not exsist", rid)

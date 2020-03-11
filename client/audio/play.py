@@ -19,14 +19,12 @@ def Recv(tcpClient):
 
     data = bytes()
     while 1:
-        # data = tcpClient.recv(BUFSIZE)
-        # stream.write(data[8+2:])
-        # print(data.__len__())
-
-        buf = (data + tcpClient.recv(BUFSIZE))
+        buf = (data + tcpClient.recv(4096))
+        BUFSIZE = 12 + \
+            int.from_bytes(buf[2:4], byteorder="little", signed=False)
         siz = buf.__len__()
         while siz >= BUFSIZE:
-            stream.write(buf[8+2:BUFSIZE])
+            stream.write(buf[8+4:BUFSIZE])
             buf = buf[BUFSIZE:]
             siz = buf.__len__()
         data = buf
@@ -42,12 +40,12 @@ def Recv(tcpClient):
 if __name__ == "__main__":
     # 发送登录信息
     header = bytes()
-    h1 = frameType.to_bytes(length=1, byteorder='big', signed=True)
-    h2 = dataType.to_bytes(length=1, byteorder='big', signed=True)
+    h1 = frameType.to_bytes(length=1, byteorder='little', signed=True)
+    h2 = dataType.to_bytes(length=1, byteorder='little', signed=True)
 
     token = b'00000000000000000000000000000001'
     rid = 10240
-    x2 = rid.to_bytes(length=8, byteorder='big', signed=True)
+    x2 = rid.to_bytes(length=8, byteorder='little', signed=True)
     header = bytes(h1+h2+token+x2)
 
     HOST = '10.0.0.23'

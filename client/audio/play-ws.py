@@ -21,9 +21,11 @@ def Recv(ws):
     data = bytes()
     while 1:
         buf = (data + ws.recv())
+        BUFSIZE = 12 + \
+            int.from_bytes(buf[2:4], byteorder="little", signed=False)
         siz = buf.__len__()
         while siz >= BUFSIZE:
-            stream.write(buf[8+2:BUFSIZE])
+            stream.write(buf[8+4:BUFSIZE])
             buf = buf[BUFSIZE:]
             siz = buf.__len__()
         data = buf
@@ -39,15 +41,15 @@ def Recv(ws):
 if __name__ == "__main__":
     # 发送登录信息
     header = bytes()
-    h1 = frameType.to_bytes(length=1, byteorder='big', signed=True)
-    h2 = dataType.to_bytes(length=1, byteorder='big', signed=True)
+    h1 = frameType.to_bytes(length=1, byteorder='little', signed=True)
+    h2 = dataType.to_bytes(length=1, byteorder='little', signed=True)
 
     token = b'00000000000000000000000000000001'
     rid = 10240
-    x2 = rid.to_bytes(length=8, byteorder='big', signed=True)
+    x2 = rid.to_bytes(length=8, byteorder='little', signed=True)
     header = bytes(h1+h2+token+x2)
 
-    addr = "ws://10.0.0.23:9902/live"
+    addr = "ws://127.0.0.1:9902/live"
 
     # websocket.enableTrace(True)
     ws = websocket.create_connection(addr)
