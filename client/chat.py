@@ -51,18 +51,7 @@ def capture_audio(tcpClient):
     p.terminate()
 
 
-def play_audio(stream, body):
-    print(body.__len__())
-    stream.write(body)
-
-
-def play_video(body):
-    arr = np.frombuffer(body, np.uint8)
-    frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
-    cv2.imshow("video", frame)
-
-
-def handle_buffer(tcpClient):
+def handle_tcp(tcp):
     p = pyaudio.PyAudio()
     stream = p.open(rate=const.RATE,
                     channels=const.CHANNELS,
@@ -72,61 +61,42 @@ def handle_buffer(tcpClient):
     preBuf = bytes()
     print("start recv buf")
     while 1:
-        buf = (preBuf + tcpClient.recv(const.TCP_BUFSIZE))
-        header = buf[:2+4]
-        length = util.get_body_length(header)
-        body = buf[2+4:]
+        # 读取header
+        header = tcp.recv(const.HEADER_LENGTH)
+        body_length = util.get_body_length(header)
+        # 读取body
+        body = bytes()
+        read = 0
+        while read < body_length:
+            need_length = 0
+            unread = body_length - read
+            if unread > const.TCP_BUFSIZE:
+				need_length = const.TCP_BUFSIZE
+			else  
+				need_length = unread
+			
+            sub_body = tcp.recv(need_length)
+            body = (body+sub_body)
+            read += sub_body.__len__()
+        if header[1] == const.AUDIO_TYPE:
+            play_audio(body)
+        elif header[1] == const.VIDEO_TYPE:
+            play_video(body)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-        print(header, length, "1----")
-        read = body.__len__()  # 已读取的长度
-
-        if read == length:
-            if header[1] == const.AUDIO_TYPE:
-                play_audio(stream, body)
-                print("play 1")
-            elif header[1] == const.VIDEO_TYPE:
-                play_video(body)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-        elif read < length:  # 报文太短 拆包
-            # 拆包 合并
-            preBuf = buf  # 下次再读取
-
-        elif read > length:  # 报文太长 粘包
-            # 粘包  分解
-
-            while read > length:
-
-                # 先读取第一个包
-                if header[1] == const.AUDIO_TYPE:
-                    play_audio(stream, body[:length])
-                    print("play 3")
-                elif header[1] == const.VIDEO_TYPE:
-                    play_video(body[:length])
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
-
-                # 读取剩余
-                leftBody = body[length:]
-                if leftBody.__len__() > const.HEADER_LENGTH:  # 不止包含头部
-                    header = leftBody[:const.HEADER_LENGTH]
-                    # length = util.get_body_length()
-
-                    # 如果不是一个完整包 合并到下一次
-                    if leftBody.__len__() < const.HEADER_LENGTH + util.get_body_length(header):
-                        preBuf = leftBody
-                        read = 0  # 跳出while循环
-                    else:
-                        length = util.get_body_length(header)
-                        print(header, length, "2----")
-                        body = leftBody[const.HEADER_LENGTH:]
-                        read = body.__len__()
-                else:
-                    preBuf = leftBody
-                    read = 0  # 跳出while循环
     print("end recv buf")
 
+
+def play_audio(stream, body):
+    print(body.__len__())
+    stream.write(body)
+
+
+def play_video(body):
+    arr = np.frombuffer(body, np.uint8)
+    frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+    cv2.imshow("video", frame)
 
 def conn(user):
  # 发送登录信息
