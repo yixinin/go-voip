@@ -4,3 +4,4 @@ live
 *debug*
 go.sum
 voip
+*.pyc
