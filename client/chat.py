@@ -79,7 +79,7 @@ def handle_tcp(tcp):
             body = (body+sub_body)
             read += sub_body.__len__()
         if header[1] == const.AUDIO_TYPE:
-            play_audio(body)
+            play_audio(stream, body)
         elif header[1] == const.VIDEO_TYPE:
             play_video(body)
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -112,13 +112,13 @@ def conn(user):
     return tcpClient
 
 
-if __name__ == '__main__':
+def main():
     user = 2
     tcpClient = conn(user)
 
-    # th_handle = threading.Thread(target=handle_buffer, args=(tcpClient,))
+    # th_handle = threading.Thread(target=handle_tcp, args=(tcpClient,))
     th_audio = threading.Thread(target=capture_audio, args=(tcpClient,))
-    th_video = threading.Thread(target=capture_video, args=(tcpClient,))
+    # th_video = threading.Thread(target=capture_video, args=(tcpClient,))
 
     # th_handle.start()
     th_audio.start()
@@ -129,6 +129,11 @@ if __name__ == '__main__':
     handle_tcp(tcpClient)
 
     # th_video.join()
-    th_audio.join()
+    for th in (th_audio,):
+        th.join()
 
     tcpClient.close()
+
+
+if __name__ == '__main__':
+    main()

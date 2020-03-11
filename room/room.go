@@ -22,7 +22,7 @@ func NewRoom(id int64, us []*user.User) *Room {
 		RoomId: id,
 		Users:  make(map[int64]*user.User, len(us)),
 		// Stop:    make(chan bool),
-		PktChan: make(chan *av.Packet),
+		PktChan: make(chan *av.Packet, 100),
 	}
 	for _, u := range us {
 		room.Users[u.Uid] = u
