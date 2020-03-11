@@ -16,6 +16,10 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const (
+	READSIZE = 4096
+)
+
 func (s *Server) handleRpc(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "POST" {
 		w.Write([]byte("pls use POST"))
@@ -52,7 +56,9 @@ func (s *Server) handleTcp(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 
 	//接受音频流
-	s.handleReader(reader, writer)
+	var stop = make(chan bool)
+	s.stopTcp = append(s.stopTcp, stop)
+	s.handleReader(reader, writer, stop)
 }
 
 func (s *Server) handleWs(conn *websocket.Conn) {
@@ -70,10 +76,12 @@ func (s *Server) handleWs(conn *websocket.Conn) {
 	reader := bufio.NewReader(wsConn)
 
 	//接受音频流
-	s.handleReader(reader, writer)
+	var stop = make(chan bool)
+	s.stopWs = append(s.stopWs, stop)
+	s.handleReader(reader, writer, stop)
 }
 
-func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer) {
+func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop chan bool) {
 	var uid int64
 	defer func() {
 		if r := recover(); r != nil {
@@ -106,38 +114,58 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer) {
 	//读取数据
 	for {
 		select {
-		case <-s.stopTcp:
-			return
-		case <-s.stopWs:
+		case <-stop:
 			return
 		default:
-			//数据包格式 1+1+2+8 frameType + dataType + dataLength + timeStamp
-			var header = make([]byte, 4+8)
-			_, err := reader.Read(header)
-			length := utils.BytesToUint16(header[2:4])
-
-			var body = make([]byte, length)
-			// var buf = make([]byte, 2+8+9600)
-			_, err = reader.Read(body)
+			//数据包格式 1+1+4 frameType + dataType + dataLength
+			var header = make([]byte, 2+4)
+			n1, err := reader.Read(header)
 			if err != nil {
 				log.Println("read buffer error:", err)
 				return
 			}
+			length := utils.BytesToUint32(header[2:])
+
+			if length == 0 {
+				log.Printf("header length:%d, body expect length:%d", n1, length)
+				continue
+			}
+
+			var body = make([]byte, length)
+
+			read := 0
+
+			for read < int(length) {
+				var currentLength int
+				if unRead := int(length) - read; unRead > READSIZE {
+					currentLength = READSIZE
+				} else {
+					currentLength = unRead
+				}
+				var subBody = make([]byte, currentLength)
+
+				n2, err := reader.Read(subBody)
+				if err != nil {
+					log.Printf("body length:%d, body expect length:%d, body read length:%d", n1, length, n2)
+					return
+				}
+
+				copy(body[read:read+n2], subBody)
+				read += n2
+			}
 
 			var buf = make([]byte, len(header)+len(body))
-			copy(buf[:len(header)], header)
-			copy(buf[len(header):], body)
+			copy(buf[:len(header)], header) //复制头
+			copy(buf[len(header):], body)   //复制body
 
 			var p = av.NewPacket(buf, uid)
-			uidBytes := utils.Int64ToBytes(uid)
 
-			copy(p.Data[4:8+4], uidBytes)
 			r, ok := s.Rooms[rid]
 			if !ok {
 				log.Println("room not exsist", rid)
 				return
 			}
-			// log.Println(len(p.Data))
+
 			r.PktChan <- p
 		}
 	}

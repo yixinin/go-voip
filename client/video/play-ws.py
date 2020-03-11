@@ -1,23 +1,14 @@
-# from websocket import create_connection
 import websocket
 import pyaudio
 import wave
 import numpy as np
+import cv2
 
 frameType = 2  # ws frame type 1=text 2=binary
 dataType = 1   # live data type 1=audio 2=video
-BUFSIZE = 1024+2+8
 
 
 def Recv(ws):
-    CHUNK = 512*2
-    FORMAT = pyaudio.paInt16
-    CHANNELS = 1
-    RATE = 48000
-
-    p = pyaudio.PyAudio()
-    stream = p.open(rate=RATE, channels=CHANNELS, format=FORMAT, output=True)
-
     preBuf = bytes()
     while 1:
         buf = (preBuf + ws.recv())
@@ -29,7 +20,8 @@ def Recv(ws):
 
         if read == length:
             play(body)
-
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
         elif read < length:
             # 拆包 合并
             while read < length:
@@ -44,26 +36,30 @@ def Recv(ws):
                 else:
                     body = (body+subBody)
             play(body)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
         elif read > length:
             # 粘包  分解
             while read > length:
                 play(body[:length])
-
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
                 body = body[length:]
                 read -= length
             preBuf = body
 
-    # 停止数据流
-    stream.stop_stream()
-    stream.close()
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
 
-    # 关闭 PyAudio
-    p.terminate()
+    cv2.destroyAllWindows()
 
 
-def play(stream, body):
-    stream.write(body)
+def play(data):
+    arr = np.frombuffer(data, np.uint8)
+    frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
+
+    cv2.imshow("video", frame)
 
 
 def conn():
@@ -88,3 +84,5 @@ def conn():
 if __name__ == "__main__":
     ws = conn()
     Recv(ws)
+
+    # ws.close()

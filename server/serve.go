@@ -14,9 +14,11 @@ func (s *Server) Serve() error {
 	for _, v := range s.conf.Protocol {
 		if v == ProtocolTCP {
 			go s.ServeSocket()
+			s.stopTcp = make([]chan bool, 0, 10)
 		}
 		if v == ProtocolTCP {
 			s.ServeWs()
+			s.stopWs = make([]chan bool, 0, 10)
 		}
 	}
 	go s.ServeHttp()

@@ -24,11 +24,18 @@ FOR:
 		select {
 		case <-s.Stop:
 			for _, r := range s.Rooms {
-				r.Stop <- true
+				close(r.PktChan)
+			}
+			for _, stop := range s.stopTcp {
+				stop <- true
+			}
+			for _, stop := range s.stopWs {
+				stop <- true
 			}
 			return
 		case rid := <-s.closeRoomChan:
-			if _, ok := s.Rooms[rid]; ok {
+			if r, ok := s.Rooms[rid]; ok {
+				close(r.PktChan)
 				delete(s.Rooms, rid)
 				log.Printf("closed room, id = %d", rid)
 			}
@@ -38,6 +45,7 @@ FOR:
 				log.Printf("repeat room: %d, ignore", createRoom.RoomId)
 				continue FOR
 			}
+
 			var uids = make([]int64, 0, len(createRoom.Users))
 			var us = make([]*user.User, 0, len(createRoom.Users))
 			for _, userInfo := range createRoom.Users {

@@ -17,17 +17,41 @@ def Recv(tcpClient):
     p = pyaudio.PyAudio()
     stream = p.open(rate=RATE, channels=CHANNELS, format=FORMAT, output=True)
 
-    data = bytes()
+    preBuf = bytes()
     while 1:
-        buf = (data + tcpClient.recv(4096))
-        BUFSIZE = 12 + \
-            int.from_bytes(buf[2:4], byteorder="little", signed=False)
-        siz = buf.__len__()
-        while siz >= BUFSIZE:
-            stream.write(buf[8+4:BUFSIZE])
-            buf = buf[BUFSIZE:]
-            siz = buf.__len__()
-        data = buf
+        buf = (preBuf + tcpClient.recv(BUFSIZE))
+        header = buf[:2+4]
+        body = buf[2+4:]
+
+        length = int.from_bytes(header[2:], byteorder="little", signed=False)
+        read = body.__len__()  # 已读取的长度
+
+        if read == length:
+            play(body)
+
+        elif read < length:
+            # 拆包 合并
+            while read < length:
+                unRead = length - read
+                subBody = tcpClient.recv(BUFSIZE)
+
+                read += subBody.__len__()
+                if read >= length:
+                    body = (body+subBody[:length-read])
+                    preBuf = subBody[length-read:]
+                    read == length
+                else:
+                    body = (body+subBody)
+            play(body)
+
+        elif read > length:
+            # 粘包  分解
+            while read > length:
+                play(body[:length])
+
+                body = body[length:]
+                read -= length
+            preBuf = body
 
     # 停止数据流
     stream.stop_stream()
@@ -35,6 +59,10 @@ def Recv(tcpClient):
 
     # 关闭 PyAudio
     p.terminate()
+
+
+def play(stream, body):
+    stream.write(body)
 
 
 if __name__ == "__main__":

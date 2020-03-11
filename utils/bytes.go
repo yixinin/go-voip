@@ -21,3 +21,6 @@ func BytesToUint64(buf []byte) uint64 {
 func BytesToUint16(buf []byte) uint16 {
 	return binary.LittleEndian.Uint16(buf)
 }
+func BytesToUint32(buf []byte) uint32 {
+	return binary.LittleEndian.Uint32(buf)
+}

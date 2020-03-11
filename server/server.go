@@ -28,8 +28,8 @@ type Server struct {
 	createRoomChan chan CreateRoom
 	closeRoomChan  chan int64
 	Stop           chan bool
-	stopTcp        chan bool
-	stopWs         chan bool
+	stopTcp        []chan bool
+	stopWs         []chan bool
 }
 
 func NewServer(c *config.Config) *Server {
@@ -39,7 +39,5 @@ func NewServer(c *config.Config) *Server {
 		tokens:         make(map[string]int64, 2*10),
 		createRoomChan: make(chan CreateRoom),
 		Stop:           make(chan bool),
-		stopTcp:        make(chan bool),
-		stopWs:         make(chan bool),
 	}
 }

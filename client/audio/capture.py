@@ -31,29 +31,19 @@ def Capture(tcpClient):
     h2 = dataType.to_bytes(length=1, byteorder='little', signed=True)
     head = bytes(h1+h2)
     print("head: ", head)
-    ts = 0
+
     while 1:
         body = stream.read(BUFSIZE)
-        # playStream.write(body)
-        # continue
-        timeStamp = ts.to_bytes(length=8, byteorder="little", signed=False)
-        length = body.__len__().to_bytes(length=2, byteorder="little", signed=False)
-        data = bytes(head + length + timeStamp + body)
+
+        length = body.__len__().to_bytes(length=4, byteorder="little", signed=False)
+        data = bytes(head + length + body)
 
         tcpClient.sendall(data)
-
-        ts += 1
 
     print("end")
     stream.stop_stream()
     stream.close()
     p.terminate()
-    # wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-    # wf.setnchannels(CHANNELS)
-    # wf.setsampwidth(p.get_sample_size(FORMAT))
-    # wf.setframerate(RATE)
-    # wf.writeframes(b''.join(frames))
-    # wf.close()
 
 
 def Recv(tcpClient):
@@ -65,17 +55,41 @@ def Recv(tcpClient):
     p = pyaudio.PyAudio()
     stream = p.open(rate=RATE, channels=CHANNELS, format=FORMAT, output=True)
 
-    data = bytes()
+    preBuf = bytes()
     while 1:
-        buf = (data + tcpClient.recv(4096))
-        BUFSIZE = 12 + \
-            int.from_bytes(buf[2:4], byteorder="little", signed=False)
-        siz = buf.__len__()
-        while siz >= BUFSIZE:
-            stream.write(buf[8+4:BUFSIZE])
-            buf = buf[BUFSIZE:]
-            siz = buf.__len__()
-        data = buf
+        buf = (preBuf + tcpClient.recv(BUFSIZE))
+        header = buf[:2+4]
+        body = buf[2+4:]
+
+        length = int.from_bytes(header[2:], byteorder="little", signed=False)
+        read = body.__len__()  # 已读取的长度
+
+        if read == length:
+            play(body)
+
+        elif read < length:
+            # 拆包 合并
+            while read < length:
+                unRead = length - read
+                subBody = tcpClient.recv(BUFSIZE)
+
+                read += subBody.__len__()
+                if read >= length:
+                    body = (body+subBody[:length-read])
+                    preBuf = subBody[length-read:]
+                    read == length
+                else:
+                    body = (body+subBody)
+            play(body)
+
+        elif read > length:
+            # 粘包  分解
+            while read > length:
+                play(body[:length])
+
+                body = body[length:]
+                read -= length
+            preBuf = body
 
     # 停止数据流
     stream.stop_stream()
@@ -85,7 +99,11 @@ def Recv(tcpClient):
     p.terminate()
 
 
-if __name__ == '__main__':
+def play(stream, body):
+    stream.write(body)
+
+
+def conn():
     # 发送登录信息
     h1 = frameType.to_bytes(length=1, byteorder='little', signed=True)
     h2 = dataType.to_bytes(length=1, byteorder='little', signed=True)
@@ -103,6 +121,11 @@ if __name__ == '__main__':
     tcpClient.connect(ADDR)
 
     tcpClient.send(header)
+    return tcpClient
+
+
+if __name__ == '__main__':
+    tcpClient = conn()
 
     # th_capture = threading.Thread(target=Capture, args=(tcpClient,))
     th_recv = threading.Thread(target=Recv, args=(tcpClient,))
