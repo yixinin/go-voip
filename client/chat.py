@@ -68,6 +68,7 @@ def handle_buffer(tcpClient):
     while 1:
         buf = (preBuf + tcpClient.recv(const.TCP_BUFSIZE))
         header = buf[:2+4]
+        print("dataType", header[1])
         body = buf[2+4:]
 
         length = int.from_bytes(header[2:], byteorder="little", signed=False)
@@ -112,11 +113,13 @@ def handle_buffer(tcpClient):
                         break
 
                 header = body[length: length + 2+4]
+                print("dataType", header[1])
                 body = body[length + header.__len__():]
-                read -= (length + header.__len__())
 
                 length = int.from_bytes(
                     header[2:], byteorder="little", signed=False)
+                read -= (length + header.__len__())
+
                 preBuf = (header + body)
 
 
