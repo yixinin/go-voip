@@ -21,6 +21,7 @@ def capture_video(tcpClient):
         buf = (header+body)
 
         tcpClient.sendall(buf)
+        # print("send video buf", buf.__len__(), "\n")
 
     cap.release()
 
@@ -41,6 +42,7 @@ def capture_audio(tcpClient):
         buf = bytes(header + body)
 
         tcpClient.sendall(buf)
+        # print("send audio buf", buf.__len__(), "\n")
 
     stream.stop_stream()
     stream.close()
@@ -65,10 +67,11 @@ def handle_buffer(tcpClient):
                     output=True)
 
     preBuf = bytes()
+    print("start recv buf")
     while 1:
         buf = (preBuf + tcpClient.recv(const.TCP_BUFSIZE))
         header = buf[:2+4]
-        print("dataType", header[1])
+        print("dataType", header[1], "\n")
         body = buf[2+4:]
 
         length = int.from_bytes(header[2:], byteorder="little", signed=False)
@@ -113,7 +116,8 @@ def handle_buffer(tcpClient):
                         break
 
                 header = body[length: length + 2+4]
-                print("dataType", header[1])
+                print("dataType", header[1], "\n")
+
                 body = body[length + header.__len__():]
 
                 length = int.from_bytes(
@@ -121,6 +125,7 @@ def handle_buffer(tcpClient):
                 read -= (length + header.__len__())
 
                 preBuf = (header + body)
+    print("end recv buf")
 
 
 def conn(user):
