@@ -5,6 +5,7 @@ import numpy as np
 import const
 import threading
 import pyaudio
+import util
 
 
 def capture_video(tcpClient):
@@ -24,7 +25,7 @@ def capture_video(tcpClient):
         tcpClient.sendall(buf)
         # print("send video buf", buf.__len__(), "\n")
 
-    cap.release()
+    cap.release()sxzddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd(7)
 
 
 def capture_audio(tcpClient):
@@ -73,10 +74,9 @@ def handle_buffer(tcpClient):
     while 1:
         buf = (preBuf + tcpClient.recv(const.TCP_BUFSIZE))
         header = buf[:2+4]
-
+        length = util.get_body_length(header)
         body = buf[2+4:]
 
-        length = int.from_bytes(header[2:], byteorder="little", signed=False)
         print(header, length, "1----")
         read = body.__len__()  # 已读取的长度
 
@@ -89,30 +89,16 @@ def handle_buffer(tcpClient):
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-        elif read < length:
+        elif read < length:  # 报文太短 拆包
             # 拆包 合并
-            while read < length:
-                unRead = length - read
-                subBody = tcpClient.recv(const.TCP_BUFSIZE)
+            preBuf = buf  # 下次再读取
 
-                read += subBody.__len__()
-                if read >= length:
-                    body = (body+subBody[:length-read])
-                    preBuf = subBody[length-read:]
-                    read == length
-                else:
-                    body = (body+subBody)
-            if header[1] == const.AUDIO_TYPE:
-                play_audio(stream, body)
-                print("play 2")
-            elif header[1] == const.VIDEO_TYPE:
-                play_video(body)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-
-        elif read > length:
+        elif read > length:  # 报文太长 粘包
             # 粘包  分解
+
             while read > length:
+
+                # 先读取第一个包
                 if header[1] == const.AUDIO_TYPE:
                     play_audio(stream, body[:length])
                     print("play 3")
@@ -120,18 +106,21 @@ def handle_buffer(tcpClient):
                     play_video(body[:length])
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
+
+                # 读取剩余
                 if body.__len__() > length+2+4:  # 不止包含头部
                     header = body[length: length + 2+4]
+                    # length = util.get_body_length()
 
-                    body = body[length + header.__len__():]
-                    length = int.from_bytes(
-                        header[2:], byteorder="little", signed=False)
-                    print(header, length, "2----")
-                    read = body.__len__()
-                    if read < length:
-                        preBuf = (header+body)
-                else:  # 下一次读取
-                    preBuf = body[length:]
+                    # 如果不是一个完整包 合并到下一次
+                    if body.__len__() < length + util.get_body_length() + 2+4:
+                        preBuf = body[length:]
+                        read = 0  # 跳出while循环
+                    else:
+                        length = util.get_body_length()
+                        print(header, length, "2----")
+                        body = body[length+2+4:]
+                        read = body.__len__()
     print("end recv buf")
 
 
@@ -146,6 +135,13 @@ def conn(user):
 
     tcpClient.send(loginBuf)
     return tcpClient
+
+
+class Packet(Object):
+    def __init__(self, buf):
+        self.is_video = buf[1] == const.VIDEO_TYPE
+        self.is_audio = buf[1] == const.AUDIO_TYPE
+        self.body = buf[2+4:]
 
 
 if __name__ == '__main__':
