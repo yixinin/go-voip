@@ -120,9 +120,9 @@ def handle_buffer(tcpClient):
                 preBuf = (header + body)
 
 
-def conn():
+def conn(user):
  # 发送登录信息
-    loginBuf = const.get_user_header(1)
+    loginBuf = const.get_user_header(user)
 
     ADDR = (const.HOST, const.TCP_PORT)
 
@@ -134,7 +134,8 @@ def conn():
 
 
 if __name__ == '__main__':
-    tcpClient = conn()
+    user = 2
+    tcpClient = conn(user)
 
     # th_handle = threading.Thread(target=handle_buffer, args=(tcpClient,))
     th_audio = threading.Thread(target=capture_audio, args=(tcpClient,))
