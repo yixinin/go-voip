@@ -71,10 +71,10 @@ def handle_tcp(tcp):
             need_length = 0
             unread = body_length - read
             if unread > const.TCP_BUFSIZE:
-				need_length = const.TCP_BUFSIZE
-			else  
-				need_length = unread
-			
+                need_length = const.TCP_BUFSIZE
+            else:
+                need_length = unread
+
             sub_body = tcp.recv(need_length)
             body = (body+sub_body)
             read += sub_body.__len__()
@@ -97,6 +97,7 @@ def play_video(body):
     arr = np.frombuffer(body, np.uint8)
     frame = cv2.imdecode(arr, cv2.IMREAD_COLOR)
     cv2.imshow("video", frame)
+
 
 def conn(user):
  # 发送登录信息
@@ -125,7 +126,7 @@ if __name__ == '__main__':
 
     # th_handle.join()
 
-    handle_buffer(tcpClient)
+    handle_tcp(tcpClient)
 
     # th_video.join()
     th_audio.join()
