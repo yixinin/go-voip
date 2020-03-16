@@ -2,14 +2,13 @@ package server
 
 import (
 	"bufio"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"log"
+	"context"
+	"go-lib/log"
 	"net"
-	"net/http"
 	"strings"
+	"time"
 	"voip/av"
+	"voip/protocol"
 	"voip/protocol/core"
 	"voip/utils"
 
@@ -20,34 +19,17 @@ const (
 	READSIZE = 4096
 )
 
-func (s *Server) handleRpc(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		w.Write([]byte("pls use POST"))
-		return
-	}
-	buf, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("read message error: %s", err)))
-		return
-	}
-	var cr CreateRoom
-	err = json.Unmarshal(buf, &cr)
-	if err != nil {
-		w.Write([]byte(fmt.Sprintf("unmarshal message error: %s", err)))
-		return
-	}
-	s.createRoomChan <- cr
-	w.Write([]byte("create room success"))
-	return
-}
+var (
+	LoginPacket = 0
+)
 
 func (s *Server) handleTcp(conn net.Conn) {
 	var ipStr = conn.RemoteAddr().String()
 	defer func() {
 		if err := recover(); err != nil {
-			log.Println("tcp exited, err:", err)
+			log.Warn("tcp exited, err:", err)
 		}
-		log.Println(" Disconnected : " + ipStr)
+		log.Warn(" Disconnected : " + ipStr)
 		conn.Close()
 	}()
 
@@ -65,9 +47,9 @@ func (s *Server) handleWs(conn *websocket.Conn) {
 	ipStr := conn.RemoteAddr().String()
 	defer func() {
 		if err := recover(); err != nil {
-			log.Panicln("ws exited err:", err)
+			log.Panicf("ws exited err:", err)
 		}
-		log.Println(" Disconnected : " + ipStr)
+		log.Warn(" Disconnected : " + ipStr)
 		conn.Close()
 	}()
 	var wsConn = core.NewWsConn(conn)
@@ -81,33 +63,51 @@ func (s *Server) handleWs(conn *websocket.Conn) {
 	s.handleReader(reader, writer, stop)
 }
 
+func (s *Server) handleHttp(buf []byte) {
+
+}
+
 func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop chan bool) {
-	var uid int64
+	var uid string
 	defer func() {
 		if r := recover(); r != nil {
-			log.Println("reader serve panic: ", r)
+			log.Warn("reader serve panic: ", r)
 		}
-		log.Println(" Disconnected : ", uid)
+		log.Warn(" Disconnected : ", uid)
+		//删除用户
+		var client protocol.ChatServiceClient
+		for _, c := range s.chatClients {
+			client = c
+			break
+		}
+		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err := client.LeaveRoom(ctx, &protocol.LeaveRoomReq{
+			Uid: uid,
+		})
+		if err != nil {
+			log.Error(err)
+		}
 	}()
 
-	var header = make([]byte, 2+32+8) //(userid + roomid)
+	var header = make([]byte, 2+32+4) //(token + roomid)
 	_, err := reader.Read(header)
 	if err != nil {
-		log.Fatal(err)
+		log.Faltal(err)
 		return
 	}
 
 	var token = strings.TrimSpace(string(header[2 : 32+2]))
-	var rid = utils.BytesToInt64(header[32+2:])
+	var rid = utils.BytesToInt32(header[32+2:])
 
-	uid, ok := s.tokens[token]
+	uid, ok := s.GetToken(token)
 	if !ok { //鉴权
-		log.Printf("access denied, uid:%d", uid)
+		log.Warnf("access denied, uid:%d", uid)
 		return
 	}
 
 	if !s.Rooms[rid].JoinRoom(uid, writer) {
-		log.Printf("access denied, roomId:%d, uid:%d", rid, uid)
+		log.Warnf("access denied, roomId:%d, uid:%d", rid, uid)
 		return
 	}
 
@@ -121,15 +121,15 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 			var header = make([]byte, 2+4)
 			n1, err := reader.Read(header)
 			if err != nil {
-				log.Println("read buffer error:", err)
+				log.Warn("read buffer error:", err)
 				return
 			}
 			length := utils.BytesToUint32(header[2:])
 
-			// log.Println(header)
+			// log.Warn(header)
 
 			if length == 0 {
-				log.Printf("header length:%d, body expect length:%d", n1, length)
+				log.Warnf("header length:%d, body expect length:%d", n1, length)
 				continue
 			}
 
@@ -148,7 +148,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 
 				n2, err := reader.Read(subBody)
 				if err != nil {
-					log.Printf("body length:%d, body expect length:%d, body read length:%d", n1, length, n2)
+					log.Warnf("body length:%d, body expect length:%d, body read length:%d", n1, length, n2)
 					return
 				}
 
@@ -164,7 +164,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 
 			r, ok := s.Rooms[rid]
 			if !ok {
-				log.Println("room not exsist", rid)
+				log.Warn("room not exsist", rid)
 				return
 			}
 

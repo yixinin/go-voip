@@ -5,7 +5,7 @@ import (
 )
 
 type User struct {
-	Uid int64
+	Uid string
 	// RoomId int64
 	// Reader bufio.Reader
 	Writer    *bufio.Writer

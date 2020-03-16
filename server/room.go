@@ -1,24 +1,31 @@
 package server
 
 import (
-	"log"
+	"go-lib/log"
+	"voip/protocol"
 	"voip/room"
-	"voip/user"
 )
 
-type UserInfo struct {
-	Uid       int64
-	VideoPush bool
-	AudioPush bool
-	Token     string
+type CreateRoom struct {
+	RoomId int32
+	Users  []*protocol.RoomUser
+}
+type JoinRoom struct {
+	RoomId int32
+	User   *protocol.RoomUser
 }
 
-type CreateRoom struct {
-	RoomId int64
-	Users  []*UserInfo
+type LeaveRoom struct {
+	RoomId int32
+	Uid    string
 }
 
 func (s *Server) handleCreateRoom() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error(err)
+		}
+	}()
 FOR:
 	for {
 		select {
@@ -37,32 +44,36 @@ FOR:
 			if r, ok := s.Rooms[rid]; ok {
 				close(r.PktChan)
 				delete(s.Rooms, rid)
-				log.Printf("closed room, id = %d", rid)
+				log.Warnf("closed room, id = %d", rid)
 			}
 
 		case createRoom := <-s.createRoomChan:
+
 			if _, ok := s.Rooms[createRoom.RoomId]; ok {
-				log.Printf("repeat room: %d, ignore", createRoom.RoomId)
+				log.Warnf("repeat room: %d, ignore", createRoom.RoomId)
 				continue FOR
 			}
+			var r = room.NewRoom(createRoom.RoomId, createRoom.Users)
+			s.Rooms[r.RoomId] = r
+			s.AddUsers(createRoom.Users)
 
-			var uids = make([]int64, 0, len(createRoom.Users))
-			var us = make([]*user.User, 0, len(createRoom.Users))
-			for _, userInfo := range createRoom.Users {
-				var u = &user.User{
-					Uid:       userInfo.Uid,
-					VideoPush: userInfo.VideoPush,
-					AudioPush: userInfo.AudioPush,
-				}
-				us = append(us, u)
-				uids = append(uids, u.Uid)
-				if _, ok := s.tokens[userInfo.Token]; !ok {
-					s.tokens[userInfo.Token] = u.Uid
-				}
+		case joinRoom := <-s.joinRoomChan:
+			r, ok := s.Rooms[joinRoom.RoomId]
+			if !ok {
+				log.Warnf("no such room: %d, ignore", joinRoom.RoomId)
+				continue FOR
 			}
+			r.JoinRoom(joinRoom.User.Uid, nil)
+			s.AddUser(joinRoom.User.Uid, joinRoom.User.Token)
 
-			s.Rooms[createRoom.RoomId] = room.NewRoom(createRoom.RoomId, us)
-			log.Printf("created room, id = %d, users : %v", createRoom.RoomId, uids)
+		case leaveRoom := <-s.leaveRoomChan:
+			r, ok := s.Rooms[leaveRoom.RoomId]
+			if !ok {
+				log.Warnf("no such room: %d, ignore", leaveRoom.RoomId)
+				continue FOR
+			}
+			r.LeaveRoom(leaveRoom.Uid)
+			s.DelUser(leaveRoom.Uid)
 		}
 	}
 }

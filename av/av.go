@@ -9,12 +9,12 @@ const (
 type Packet struct {
 	isAudio bool
 	isVideo bool
-	Uid     int64
+	Uid     string
 	// TimeStamp uint64
 	Data []byte
 }
 
-func NewPacket(data []byte, uid int64) *Packet {
+func NewPacket(data []byte, uid string) *Packet {
 	return &Packet{
 		isAudio: data[1] == AudioType,
 		isVideo: data[1] == VideoType,

@@ -1,13 +1,18 @@
 package utils
 
 import (
-	"strconv"
+	"math/rand"
 	"sync/atomic"
+	"time"
 )
 
-var uid uint64
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
-func GetUID() string {
-	atomic.AddUint64(&uid, 1)
-	return strconv.FormatUint(uid, 10)
+var roomId int32 = 10023
+
+func GetRoomID() int32 {
+	newRoomId := atomic.AddInt32(&roomId, rand.Int31n(10))
+	return newRoomId
 }

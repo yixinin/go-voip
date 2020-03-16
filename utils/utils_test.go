@@ -15,3 +15,10 @@ func Test_Bytes(t *testing.T) {
 	copy(c[:2], b[:2])
 	fmt.Println(c)
 }
+
+func Test_Atom(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		rid := GetRoomID()
+		fmt.Println(rid)
+	}
+}

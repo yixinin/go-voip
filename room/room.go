@@ -5,33 +5,38 @@ import (
 	"log"
 	"sync"
 	"voip/av"
+	"voip/protocol"
 	"voip/user"
 )
 
 type Room struct {
 	sync.RWMutex
-	RoomId  int64
+	RoomId  int32
 	PktChan chan *av.Packet
-	Users   map[int64]*user.User
+	Users   map[string]*user.User
 
 	// Stop chan bool
 }
 
-func NewRoom(id int64, us []*user.User) *Room {
+func NewRoom(id int32, us []*protocol.RoomUser) *Room {
 	var room = &Room{
 		RoomId: id,
-		Users:  make(map[int64]*user.User, len(us)),
+		Users:  make(map[string]*user.User, len(us)),
 		// Stop:    make(chan bool),
 		PktChan: make(chan *av.Packet, 100),
 	}
 	for _, u := range us {
-		room.Users[u.Uid] = u
+		room.Users[u.Uid] = &user.User{
+			Uid:       u.Uid,
+			VideoPush: u.VideoPush,
+			AudioPush: u.AudioPush,
+		}
 	}
 	go room.handlePacket()
 	return room
 }
 
-func (r *Room) JoinRoom(uid int64, writer *bufio.Writer) bool {
+func (r *Room) JoinRoom(uid string, writer *bufio.Writer) bool {
 	r.Lock()
 	defer r.Unlock()
 	if _, ok := r.Users[uid]; !ok {
@@ -42,7 +47,7 @@ func (r *Room) JoinRoom(uid int64, writer *bufio.Writer) bool {
 	return true
 }
 
-func (r *Room) LeaveRoom(uid int64) {
+func (r *Room) LeaveRoom(uid string) {
 	r.Lock()
 	defer r.Unlock()
 	if _, ok := r.Users[uid]; ok {
