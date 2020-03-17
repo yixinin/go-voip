@@ -47,6 +47,11 @@ func (r *Room) JoinRoom(uid string, writer *bufio.Writer) bool {
 	return true
 }
 
+func (r *Room) InRoom(uid string) bool {
+	_, ok := r.Users[uid]
+	return ok
+}
+
 func (r *Room) LeaveRoom(uid string) {
 	r.Lock()
 	defer r.Unlock()

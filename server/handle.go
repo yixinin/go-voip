@@ -3,6 +3,7 @@ package server
 import (
 	"bufio"
 	"context"
+	"go-lib/ip"
 	"go-lib/log"
 	"net"
 	"strings"
@@ -37,10 +38,7 @@ func (s *Server) handleTcp(conn net.Conn) {
 	writer := bufio.NewWriter(conn)
 	reader := bufio.NewReader(conn)
 
-	//接受音频流
-	var stop = make(chan bool)
-	s.stopTcp = append(s.stopTcp, stop)
-	s.handleReader(reader, writer, stop)
+	s.handleReader(reader, writer, "tcp")
 }
 
 func (s *Server) handleWs(conn *websocket.Conn) {
@@ -57,17 +55,33 @@ func (s *Server) handleWs(conn *websocket.Conn) {
 	writer := bufio.NewWriter(wsConn)
 	reader := bufio.NewReader(wsConn)
 
-	//接受音频流
-	var stop = make(chan bool)
-	s.stopWs = append(s.stopWs, stop)
-	s.handleReader(reader, writer, stop)
+	s.handleReader(reader, writer, "ws")
 }
 
 func (s *Server) handleHttp(buf []byte) {
-
+	//获取token,roomId
+	if len(buf) < 32+4 {
+		return
+	}
+	var token = strings.TrimSpace(string(buf[:32]))
+	var rid = utils.BytesToInt32(buf[32:])
+	uid, ok := s.GetToken(token)
+	if !ok { //鉴权
+		log.Warnf("access denied, uid:%s", uid)
+		return
+	}
+	r, ok := s.GetRoom(rid)
+	if !ok {
+		log.Warnf("access denied,  rid:%d", rid)
+		return
+	}
+	if !r.InRoom(uid) {
+		log.Warnf("access denied,rid:%d, uid:%s", rid, uid)
+		return
+	}
 }
 
-func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop chan bool) {
+func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, p string) {
 	var uid string
 	defer func() {
 		if r := recover(); r != nil {
@@ -93,7 +107,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 	var header = make([]byte, 2+32+4) //(token + roomid)
 	_, err := reader.Read(header)
 	if err != nil {
-		log.Faltal(err)
+		log.Fatal(err)
 		return
 	}
 
@@ -105,16 +119,58 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 		log.Warnf("access denied, uid:%d", uid)
 		return
 	}
+	r, ok := s.GetRoom(rid)
+	if !ok {
+		log.Warnf("access denied, uid:%d", uid)
+		return
+	}
 
-	if !s.Rooms[rid].JoinRoom(uid, writer) {
+	if !r.JoinRoom(uid, writer) {
 		log.Warnf("access denied, roomId:%d, uid:%d", rid, uid)
 		return
+	}
+
+	//成功连接 发送给chatserver
+	var client protocol.ChatServiceClient
+	for _, c := range s.chatClients {
+		client = c
+	}
+
+	if client != nil {
+		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_, err = client.JoinRoom(ctx, &protocol.JoinRoomReq{
+			RoomId:   rid,
+			Addr:     ip.GrpcAddr(s.conf.GrpcPort),
+			Protocol: p,
+			User: &protocol.RoomUser{
+				Uid: uid,
+			},
+		})
+		if err != nil {
+			log.Error(err)
+		}
+	}
+
+	var stop = make(chan bool)
+	switch p {
+	case "tcp":
+		if oldStop, ok := s.stopTcp[uid]; ok {
+			oldStop <- true
+		}
+		s.stopTcp[uid] = stop
+	case "ws":
+		if oldStop, ok := s.stopWs[uid]; ok {
+			oldStop <- true
+		}
+		s.stopWs[uid] = stop
 	}
 
 	//读取数据
 	for {
 		select {
 		case <-stop:
+			close(stop)
 			return
 		default:
 			//数据包格式 1+1+4 frameType + dataType + dataLength
@@ -162,7 +218,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, stop c
 
 			var p = av.NewPacket(buf, uid)
 
-			r, ok := s.Rooms[rid]
+			r, ok := s.GetRoom(rid)
 			if !ok {
 				log.Warn("room not exsist", rid)
 				return

@@ -25,13 +25,29 @@ func (s *Server) DelUser(uid string) {
 			break
 		}
 	}
+	if ch, ok := s.stopTcp[uid]; ok {
+		ch <- true
+		delete(s.stopTcp, uid)
+	}
+	if ch, ok := s.stopWs[uid]; ok {
+		ch <- true
+		delete(s.stopWs, uid)
+	}
 }
 
 func (s *Server) DelToken(token string) {
 	s.Lock()
 	defer s.Unlock()
-	if _, ok := s.tokens[token]; ok {
+	if uid, ok := s.tokens[token]; ok {
 		delete(s.tokens, token)
+		if ch, ok := s.stopTcp[uid]; ok {
+			ch <- true
+			delete(s.stopTcp, uid)
+		}
+		if ch, ok := s.stopWs[uid]; ok {
+			ch <- true
+			delete(s.stopWs, uid)
+		}
 	}
 	return
 }

@@ -11,7 +11,7 @@ type Config struct {
 	TcpPort  string   `yaml:"tcp_port"`
 	ListenIp string   `yaml:"listen_ip"`
 	HttpPort string   `yaml:"http_port"`
-	GrpcPort string
+	GrpcPort string   `yaml:"grpc_port"`
 }
 
 func ParseConfig(path string) (*Config, error) {

@@ -20,7 +20,7 @@ type LeaveRoom struct {
 	Uid    string
 }
 
-func (s *Server) handleCreateRoom() {
+func (s *Server) manageRoomUser() {
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error(err)
@@ -41,24 +41,16 @@ FOR:
 			}
 			return
 		case rid := <-s.closeRoomChan:
-			if r, ok := s.Rooms[rid]; ok {
-				close(r.PktChan)
-				delete(s.Rooms, rid)
-				log.Warnf("closed room, id = %d", rid)
-			}
+			s.DelRoom(rid)
 
 		case createRoom := <-s.createRoomChan:
 
-			if _, ok := s.Rooms[createRoom.RoomId]; ok {
-				log.Warnf("repeat room: %d, ignore", createRoom.RoomId)
-				continue FOR
-			}
 			var r = room.NewRoom(createRoom.RoomId, createRoom.Users)
-			s.Rooms[r.RoomId] = r
+			s.AddRoom(r)
 			s.AddUsers(createRoom.Users)
 
 		case joinRoom := <-s.joinRoomChan:
-			r, ok := s.Rooms[joinRoom.RoomId]
+			r, ok := s.GetRoom(joinRoom.RoomId)
 			if !ok {
 				log.Warnf("no such room: %d, ignore", joinRoom.RoomId)
 				continue FOR
@@ -67,7 +59,7 @@ FOR:
 			s.AddUser(joinRoom.User.Uid, joinRoom.User.Token)
 
 		case leaveRoom := <-s.leaveRoomChan:
-			r, ok := s.Rooms[leaveRoom.RoomId]
+			r, ok := s.GetRoom(leaveRoom.RoomId)
 			if !ok {
 				log.Warnf("no such room: %d, ignore", leaveRoom.RoomId)
 				continue FOR

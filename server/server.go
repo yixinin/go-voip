@@ -46,8 +46,8 @@ type Server struct {
 
 	Stop      chan bool
 	stopWatch chan bool
-	stopTcp   []chan bool
-	stopWs    []chan bool
+	stopTcp   map[string]chan bool
+	stopWs    map[string]chan bool
 	config    *config.Config
 }
 
@@ -65,13 +65,11 @@ func NewServer(c *config.Config) *Server {
 		leaveRoomChan:  make(chan LeaveRoom),
 
 		Stop:      make(chan bool),
-		stopTcp:   make([]chan bool, 0, 100),
-		stopWs:    make([]chan bool, 0, 100),
 		stopWatch: make(chan bool),
 	}
 
 	var srv = grpc.NewServer()
-	var rs = NewRoomServer(s.createRoomChan, s.joinRoomChan, s.leaveRoomChan, s.closeRoomChan)
+	var rs = NewRoomServer(s.createRoomChan, s.joinRoomChan, s.leaveRoomChan, s.closeRoomChan, s.conf.GrpcPort)
 	protocol.RegisterRoomServiceServer(srv, rs)
 	var listen, err = net.Listen("tcp", fmt.Sprintf(":%s", s.config.GrpcPort))
 	if err != nil {
@@ -86,6 +84,41 @@ func NewServer(c *config.Config) *Server {
 	s.watcher = watcher
 	go s.Watch()
 	return s
+}
+
+func (s *Server) GetRoom(rid int32) (*room.Room, bool) {
+	s.RLock()
+	defer s.RUnlock()
+	r, ok := s.Rooms[rid]
+	return r, ok
+}
+func (s *Server) AddRoom(r *room.Room) {
+	s.Lock()
+	defer s.Unlock()
+	if _, ok := s.Rooms[r.RoomId]; ok {
+		log.Warnf("repeat room: %d, ignore", r.RoomId)
+		return
+	}
+	s.Rooms[r.RoomId] = r
+}
+
+func (s *Server) DelRoom(rid int32) {
+	s.Lock()
+	defer s.Unlock()
+	if r, ok := s.Rooms[rid]; ok {
+		for _, u := range r.Users {
+			if ch, ok := s.stopWs[u.Uid]; ok {
+				ch <- true
+				delete(s.stopWs, u.Uid)
+			}
+			if ch, ok := s.stopTcp[u.Uid]; ok {
+				ch <- true
+				delete(s.stopTcp, u.Uid)
+			}
+		}
+		close(r.PktChan)
+		delete(s.Rooms, rid)
+	}
 }
 
 func (s *Server) AddNode(addr string) {

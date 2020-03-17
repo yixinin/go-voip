@@ -20,18 +20,18 @@ func (s *Server) Serve() error {
 	for _, v := range s.conf.Protocol {
 		if v == ProtocolTCP {
 			go s.ServeSocket()
-			s.stopTcp = make([]chan bool, 0, 10)
+			s.stopTcp = make(map[string]chan bool, 10)
 		}
 		if v == ProtocolTCP {
 			s.ServeWs()
-			s.stopWs = make([]chan bool, 0, 10)
+			s.stopWs = make(map[string]chan bool, 10)
 		}
 	}
 	go s.ServeHttp()
-	go s.handleCreateRoom()
+	go s.manageRoomUser()
 	var srv = &registry.Service{
 		Name:    "live-chat.voip",
-		Version: "1.0",
+		Version: "v1.0",
 		Nodes: []*registry.Node{
 			&registry.Node{
 				Id:      utils.UUID(),
@@ -86,16 +86,18 @@ func (s *Server) ServeHttp() {
 		if err := recover(); err != nil {
 			log.Error(err)
 		}
-		http.HandleFunc("/live/http", func(w http.ResponseWriter, r *http.Request) {
-			var buf, err = ioutil.ReadAll(r.Response.Body)
-			if err != nil {
-				w.Write([]byte(""))
-				return
-			}
-			s.handleHttp(buf)
-		})
 	}()
+
+	http.HandleFunc("/live/http", func(w http.ResponseWriter, r *http.Request) {
+		var buf, err = ioutil.ReadAll(r.Response.Body)
+		if err != nil {
+			w.Write([]byte(""))
+			return
+		}
+		s.handleHttp(buf)
+	})
+
 	var addr = fmt.Sprintf("%s:%s", s.conf.ListenIp, s.conf.HttpPort)
 	log.Warn("listen http in", addr)
-	log.Faltal(http.ListenAndServe(addr, nil))
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
