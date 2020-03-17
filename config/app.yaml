@@ -1,7 +1,14 @@
+
+etcd:
+    - 127.0.0.1:2279
+    - 127.0.0.1:2379
+    - 127.0.0.1:2479
+    - 127.0.0.1:2579
 protocol: 
     - "tcp"
     - "ws"
+    - "http"
 listen_ip: "0.0.0.0"
 tcp_port: "9901"
 http_port: "9902"
-grpc_port: "9292"
+grpc_port: "8282"

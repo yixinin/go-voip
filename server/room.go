@@ -30,6 +30,11 @@ FOR:
 	for {
 		select {
 		case <-s.Stop:
+			err := s.Registry.Deregister(s.RegistryService)
+			if err != nil {
+				log.Error(err)
+			}
+			s.stopWatch <- true
 			for _, r := range s.Rooms {
 				close(r.PktChan)
 			}
@@ -66,6 +71,7 @@ FOR:
 			}
 			r.LeaveRoom(leaveRoom.Uid)
 			s.DelUser(leaveRoom.Uid)
+		default:
 		}
 	}
 }

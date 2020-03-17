@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"go-lib/ip"
+	"voip/config"
 	"voip/protocol"
 	"voip/utils"
 )
@@ -12,15 +14,16 @@ type RoomServer struct {
 	joinRoomCh   chan JoinRoom
 	leaveRoomCh  chan LeaveRoom
 	closeRoomCh  chan int32
-	port         string
+	config       *config.Config
 }
 
-func NewRoomServer(create chan CreateRoom, join chan JoinRoom, leave chan LeaveRoom, clos chan int32, port string) *RoomServer {
+func NewRoomServer(create chan CreateRoom, join chan JoinRoom, leave chan LeaveRoom, clos chan int32, c *config.Config) *RoomServer {
 	var s = &RoomServer{
 		createRoomCh: create,
 		joinRoomCh:   join,
 		leaveRoomCh:  leave,
 		closeRoomCh:  clos,
+		config:       c,
 	}
 
 	return s
@@ -33,7 +36,9 @@ func (s *RoomServer) CreateRoom(ctx context.Context, req *protocol.CreateRoomReq
 		RoomId: utils.GetRoomID(),
 	}
 	ack.RoomId = rid
-	ack.Addr = ip.GrpcAddr(s.port)
+	ack.TcpAddr = ip.GrpcAddr(s.config.TcpPort)
+	ack.WsAddr = fmt.Sprintf("ws://%s/ws/live", ip.GetAddr(s.config.HttpPort))
+	ack.HttpAddr = fmt.Sprintf("http://%s/http/live", ip.GetAddr(s.config.HttpPort))
 	return
 }
 

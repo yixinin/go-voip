@@ -31,11 +31,11 @@ func init() {
 
 type Server struct {
 	sync.RWMutex
-	Rooms    map[int32]*room.Room
-	Registry registry.Registry
-	watcher  registry.Watcher
-	conf     *config.Config
-	tokens   map[string]string //[token]uid
+	Rooms           map[int32]*room.Room
+	Registry        registry.Registry
+	RegistryService *registry.Service
+	watcher         registry.Watcher
+	tokens          map[string]string //[token]uid
 
 	chatClients map[string]protocol.ChatServiceClient
 
@@ -55,7 +55,7 @@ func NewServer(c *config.Config) *Server {
 	var regist = etcd.NewRegistry()
 	var s = &Server{
 		Rooms:          make(map[int32]*room.Room, 2),
-		conf:           c,
+		config:         c,
 		Registry:       regist,
 		tokens:         make(map[string]string, 2*10),
 		chatClients:    make(map[string]protocol.ChatServiceClient),
@@ -69,20 +69,28 @@ func NewServer(c *config.Config) *Server {
 	}
 
 	var srv = grpc.NewServer()
-	var rs = NewRoomServer(s.createRoomChan, s.joinRoomChan, s.leaveRoomChan, s.closeRoomChan, s.conf.GrpcPort)
+	var rs = NewRoomServer(s.createRoomChan, s.joinRoomChan, s.leaveRoomChan, s.closeRoomChan, s.config)
 	protocol.RegisterRoomServiceServer(srv, rs)
 	var listen, err = net.Listen("tcp", fmt.Sprintf(":%s", s.config.GrpcPort))
 	if err != nil {
 		log.Error(err)
 	}
-	srv.Serve(listen)
-	watcher, err := regist.Watch()
+
+	go func() {
+		err := srv.Serve(listen)
+		if err != nil {
+			log.Error(err)
+		}
+	}()
+	s.Registry.Init(
+		registry.Addrs(s.config.EtcdAddr...),
+	)
+	watcher, err := s.Registry.Watch()
 	if err != nil {
 		log.Error(err)
 		return s
 	}
 	s.watcher = watcher
-	go s.Watch()
 	return s
 }
 
@@ -162,15 +170,27 @@ func (s *Server) Watch() {
 			log.Error(err)
 		}
 	}()
+	services, err := s.Registry.GetService("live-chat.chat")
+	if err == nil {
+		for _, srv := range services {
+			for _, node := range srv.Nodes {
+				s.AddNode(node.Address)
+				log.Infof("add node %s :%s", srv.Name, node.Address)
+			}
+		}
+	} else {
+		log.Error(err)
+	}
 
 	for {
 		select {
 		case <-s.stopWatch:
 			return
 		default:
+
 			res, err := s.watcher.Next()
 			if err != nil {
-				log.Error(err)
+				log.Error("netx err:%v", err)
 				continue
 			}
 			var name = res.Service.Name
@@ -179,17 +199,27 @@ func (s *Server) Watch() {
 				case "create":
 					for _, node := range res.Service.Nodes {
 						s.AddNode(node.Address)
+						log.Infof("----new node %s :%s", name, node.Address)
 					}
 				case "update":
 					for _, node := range res.Service.Nodes {
 						s.UpdateNode(node.Address)
+						log.Infof("----update node %s :%s", name, node.Address)
 					}
 				case "delete":
 					for _, node := range res.Service.Nodes {
 						s.DeleteNode(node.Address)
+						log.Infof("----del node %s :%s", name, node.Address)
+					}
+				default:
+					for _, node := range res.Service.Nodes {
+						log.Infof("----not cased, %s node %s :%s", res.Action, name, node.Address)
 					}
 				}
-
+			} else {
+				for _, node := range res.Service.Nodes {
+					log.Infof("%s node %s :%s", res.Action, name, node.Address)
+				}
 			}
 		}
 	}

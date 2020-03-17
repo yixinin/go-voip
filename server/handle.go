@@ -141,7 +141,7 @@ func (s *Server) handleReader(reader *bufio.Reader, writer *bufio.Writer, p stri
 		defer cancel()
 		_, err = client.JoinRoom(ctx, &protocol.JoinRoomReq{
 			RoomId:   rid,
-			Addr:     ip.GrpcAddr(s.conf.GrpcPort),
+			Addr:     ip.GrpcAddr(s.config.GrpcPort),
 			Protocol: p,
 			User: &protocol.RoomUser{
 				Uid: uid,

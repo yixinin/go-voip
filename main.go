@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"go-lib/ip"
 	"log"
 	"net/http"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"strings"
 	"voip/config"
 	"voip/server"
-	"voip/utils"
 )
 
 var (
@@ -22,11 +22,10 @@ func main() {
 		log.Fatalf("load config error: %v", err)
 		os.Exit(0)
 	}
+
 	var server = server.NewServer(conf)
 	server.Serve()
-
-	createRoom()
-	showIP()
+	showIP(conf.GrpcPort)
 	//监听退出信号
 	c := make(chan os.Signal)
 	//监听所有信号
@@ -44,8 +43,8 @@ func main() {
 	}
 }
 
-func showIP() {
-	log.Println("本机IP:", utils.IPAddress())
+func showIP(port string) {
+	log.Println("本机IP:", ip.GrpcAddr(port))
 }
 
 func createRoom() {
