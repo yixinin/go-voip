@@ -4,7 +4,7 @@ import (
 	"voip/rw"
 )
 
-type User struct {
+type RoomUser struct {
 	Uid int64
 	// RoomId int64
 	// Reader bufio.Reader
@@ -13,4 +13,11 @@ type User struct {
 	VideoPush bool
 	AudioPush bool
 	// Token     string
+}
+
+type User struct {
+	Token  string
+	RoomId int32
+	Uid    int64
+	Addr   string //chat服务器
 }

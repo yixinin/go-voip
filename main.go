@@ -42,7 +42,7 @@ func main() {
 		case sig := <-c:
 			switch sig {
 			case os.Interrupt:
-				server.Stop <- true
+				server.Shutdown()
 			}
 			return
 		}

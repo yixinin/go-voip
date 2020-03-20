@@ -9,11 +9,11 @@ import (
 )
 
 func (s *Server) LeaveRoom(uid int64) {
-	var client protocol.ChatServiceClient
-	for _, c := range s.chatClients {
-		client = c
-		break
+	var addr, client = s.GetRandomChatClient()
+	if addr == "" {
+		return
 	}
+
 	var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_, err := client.LeaveRoom(ctx, &protocol.LeaveRoomReq{
@@ -25,11 +25,10 @@ func (s *Server) LeaveRoom(uid int64) {
 }
 
 func (s *Server) JoinRoom(uid int64, rid int32, p string) {
-	var client protocol.ChatServiceClient
-	for _, c := range s.chatClients {
-		client = c
+	var addr, client = s.GetRandomChatClient()
+	if addr == "" {
+		return
 	}
-
 	if client != nil {
 		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

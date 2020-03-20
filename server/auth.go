@@ -18,11 +18,12 @@ func (s *Server) Auth(readerWriter rw.ReaderWriterCloser) (uid int64, rid int32,
 	var token = strings.TrimSpace(string(header[2 : 32+2]))
 	rid = utils.BytesToInt32(header[32+2:])
 
-	uid, ok = s.GetToken(token)
+	u, ok := s.GetUser(token)
 	if !ok { //鉴权
-		log.Warnf("access denied, uid:%d", uid)
+		log.Warnf("access denied, token:%s", token)
 		return
 	}
+	uid = u.Uid
 	r, ok := s.GetRoom(rid)
 	if !ok {
 		log.Warnf("access denied, uid:%d", uid)

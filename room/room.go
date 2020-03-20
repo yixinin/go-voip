@@ -13,7 +13,7 @@ type Room struct {
 	sync.RWMutex
 	RoomId  int32
 	PktChan chan *av.Packet
-	Users   map[int64]*user.User
+	Users   map[int64]*user.RoomUser
 
 	// Stop chan bool
 }
@@ -21,12 +21,12 @@ type Room struct {
 func NewRoom(id int32, us []*protocol.RoomUser) *Room {
 	var room = &Room{
 		RoomId: id,
-		Users:  make(map[int64]*user.User, len(us)),
+		Users:  make(map[int64]*user.RoomUser, len(us)),
 		// Stop:    make(chan bool),
 		PktChan: make(chan *av.Packet, 100),
 	}
 	for _, u := range us {
-		room.Users[u.Uid] = &user.User{
+		room.Users[u.Uid] = &user.RoomUser{
 			Uid:       u.Uid,
 			VideoPush: u.VideoPush,
 			AudioPush: u.AudioPush,
