@@ -17,7 +17,7 @@ type JoinRoom struct {
 
 type LeaveRoom struct {
 	RoomId int32
-	Uid    string
+	Uid    int64
 }
 
 func (s *Server) manageRoomUser() {
@@ -38,12 +38,7 @@ FOR:
 			for _, r := range s.Rooms {
 				close(r.PktChan)
 			}
-			for _, stop := range s.stopTcp {
-				stop <- true
-			}
-			for _, stop := range s.stopWs {
-				stop <- true
-			}
+
 			return
 		case rid := <-s.closeRoomChan:
 			s.DelRoom(rid)

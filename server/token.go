@@ -2,7 +2,7 @@ package server
 
 import "voip/protocol"
 
-func (s *Server) AddUser(uid, token string) {
+func (s *Server) AddUser(uid int64, token string) {
 	s.Lock()
 	defer s.Unlock()
 	s.tokens[token] = uid
@@ -16,7 +16,7 @@ func (s *Server) AddUsers(users []*protocol.RoomUser) {
 	}
 }
 
-func (s *Server) DelUser(uid string) {
+func (s *Server) DelUser(uid int64) {
 	s.Lock()
 	defer s.Unlock()
 	for k, v := range s.tokens {
@@ -25,34 +25,18 @@ func (s *Server) DelUser(uid string) {
 			break
 		}
 	}
-	if ch, ok := s.stopTcp[uid]; ok {
-		ch <- true
-		delete(s.stopTcp, uid)
-	}
-	if ch, ok := s.stopWs[uid]; ok {
-		ch <- true
-		delete(s.stopWs, uid)
-	}
 }
 
 func (s *Server) DelToken(token string) {
 	s.Lock()
 	defer s.Unlock()
-	if uid, ok := s.tokens[token]; ok {
+	if _, ok := s.tokens[token]; ok {
 		delete(s.tokens, token)
-		if ch, ok := s.stopTcp[uid]; ok {
-			ch <- true
-			delete(s.stopTcp, uid)
-		}
-		if ch, ok := s.stopWs[uid]; ok {
-			ch <- true
-			delete(s.stopWs, uid)
-		}
 	}
 	return
 }
 
-func (s *Server) GetToken(token string) (uid string, ok bool) {
+func (s *Server) GetToken(token string) (uid int64, ok bool) {
 	s.RLock()
 	defer s.RUnlock()
 	uid, ok = s.tokens[token]

@@ -1,14 +1,16 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"go-lib/ip"
 	"go-lib/log"
-	"go-lib/utils"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
+	"voip/rw"
+	"go-lib/utils"
 
 	"go-lib/registry"
 )
@@ -20,11 +22,9 @@ func (s *Server) Serve() error {
 	for _, v := range s.config.Protocol {
 		if v == ProtocolTCP {
 			go s.ServeSocket()
-			s.stopTcp = make(map[string]chan bool, 10)
 		}
 		if v == ProtocolTCP {
 			s.ServeWs()
-			s.stopWs = make(map[string]chan bool, 10)
 		}
 	}
 	go s.ServeHttp()
@@ -91,12 +91,30 @@ func (s *Server) ServeHttp() {
 	}()
 
 	http.HandleFunc("/live/http", func(w http.ResponseWriter, r *http.Request) {
-		var buf, err = ioutil.ReadAll(r.Response.Body)
+		var httpRw = rw.NewHttpReaderWriter(w, r.Body)
+		s.handleHttpReader(httpRw)
+	})
+	http.HandleFunc("/createRoom", func(w http.ResponseWriter, r *http.Request) {
+		buf, err := ioutil.ReadAll(r.Body)
 		if err != nil {
-			w.Write([]byte(""))
+			log.Error(err)
 			return
 		}
-		s.handleHttp(buf)
+
+		var createRoom CreateRoom
+
+		err = json.Unmarshal(buf, &createRoom)
+		if err != nil {
+			log.Error(err)
+			return
+		}
+		if len(createRoom.Users) > 1 {
+			if createRoom.RoomId == 0 {
+				createRoom.RoomId = utils.GetRoomID()
+			}
+			s.createRoomChan <- createRoom
+		}
+
 	})
 
 	var addr = fmt.Sprintf("%s:%s", s.config.ListenIp, s.config.HttpPort)

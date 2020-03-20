@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"go-lib/ip"
+	"go-lib/utils"
 	"voip/config"
 	"voip/protocol"
-	"voip/utils"
 )
 
 type RoomServer struct {
@@ -33,7 +33,7 @@ func (s *RoomServer) CreateRoom(ctx context.Context, req *protocol.CreateRoomReq
 	var rid = utils.GetRoomID()
 	s.createRoomCh <- CreateRoom{
 		Users:  req.Users,
-		RoomId: utils.GetRoomID(),
+		RoomId: rid,
 	}
 	ack.RoomId = rid
 	ack.TcpAddr = ip.GrpcAddr(s.config.TcpPort)

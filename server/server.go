@@ -35,7 +35,7 @@ type Server struct {
 	Registry        registry.Registry
 	RegistryService *registry.Service
 	watcher         registry.Watcher
-	tokens          map[string]string //[token]uid
+	tokens          map[string]int64 //[token]uid
 
 	chatClients map[string]protocol.ChatServiceClient
 
@@ -46,18 +46,19 @@ type Server struct {
 
 	Stop      chan bool
 	stopWatch chan bool
-	stopTcp   map[string]chan bool
-	stopWs    map[string]chan bool
-	config    *config.Config
+
+	config *config.Config
 }
 
 func NewServer(c *config.Config) *Server {
 	var regist = etcd.NewRegistry()
+	var rooms = make(map[int32]*room.Room, 2)
+
 	var s = &Server{
-		Rooms:          make(map[int32]*room.Room, 2),
+		Rooms:          rooms,
 		config:         c,
 		Registry:       regist,
-		tokens:         make(map[string]string, 2*10),
+		tokens:         make(map[string]int64, 2*10),
 		chatClients:    make(map[string]protocol.ChatServiceClient),
 		createRoomChan: make(chan CreateRoom),
 		closeRoomChan:  make(chan int32),
@@ -114,16 +115,6 @@ func (s *Server) DelRoom(rid int32) {
 	s.Lock()
 	defer s.Unlock()
 	if r, ok := s.Rooms[rid]; ok {
-		for _, u := range r.Users {
-			if ch, ok := s.stopWs[u.Uid]; ok {
-				ch <- true
-				delete(s.stopWs, u.Uid)
-			}
-			if ch, ok := s.stopTcp[u.Uid]; ok {
-				ch <- true
-				delete(s.stopTcp, u.Uid)
-			}
-		}
 		close(r.PktChan)
 		delete(s.Rooms, rid)
 	}

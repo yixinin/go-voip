@@ -1,14 +1,14 @@
 package user
 
 import (
-	"bufio"
+	"voip/rw"
 )
 
 type User struct {
-	Uid string
+	Uid int64
 	// RoomId int64
 	// Reader bufio.Reader
-	Writer    *bufio.Writer
+	Writer    rw.WriterCloser
 	Avlible   bool
 	VideoPush bool
 	AudioPush bool
