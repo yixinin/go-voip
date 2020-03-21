@@ -2,60 +2,26 @@ package server
 
 import (
 	"go-lib/log"
+	"go-lib/pool"
 	"voip/protocol"
 
-	"google.golang.org/grpc"
+	"github.com/micro/go-micro/v2/registry"
 )
 
-func (s *Server) AddNode(addr string) {
-	s.Lock()
-	defer s.Unlock()
-	var conn, err = grpc.Dial(addr, grpc.WithInsecure())
-	if err != nil {
-		log.Error(err)
-		return
+func (s *Server) GetRoomClient(addr string) (protocol.ChatServiceClient, bool) {
+	var conn, ok = pool.DefaultGrpcConnPool.GetConn(addr)
+	if !ok {
+		return nil, false
 	}
-	client := protocol.NewChatServiceClient(conn)
-	s.chatClients[addr] = client
+	return protocol.NewChatServiceClient(conn), true
 }
 
-func (s *Server) UpdateNode(addr string) {
-	s.Lock()
-	defer s.Unlock()
-	if _, ok := s.chatClients[addr]; ok {
-		return
+func (s *Server) GetRandomRoomClient() (protocol.ChatServiceClient, bool) {
+	var addr, conn = pool.DefaultGrpcConnPool.GetRandomConn()
+	if addr == "" {
+		return nil, false
 	}
-	var conn, err = grpc.Dial(addr, grpc.WithInsecure())
-	if err != nil {
-		log.Error(err)
-		return
-	}
-	client := protocol.NewChatServiceClient(conn)
-	s.chatClients[addr] = client
-}
-
-func (s *Server) DeleteNode(addr string) {
-	s.Lock()
-	defer s.Unlock()
-	if _, ok := s.chatClients[addr]; ok {
-		delete(s.chatClients, addr)
-	}
-}
-
-func (s *Server) GetRandomChatClient() (addr string, client protocol.ChatServiceClient) {
-	s.RLock()
-	defer s.RUnlock()
-	for k, v := range s.chatClients {
-		return k, v
-	}
-	return "", nil
-}
-
-func (s *Server) GetChatClient(addr string) (client protocol.ChatServiceClient, ok bool) {
-	s.RLock()
-	defer s.RUnlock()
-	client, ok = s.chatClients[addr]
-	return
+	return protocol.NewChatServiceClient(conn), true
 }
 
 func (s *Server) Watch() {
@@ -68,7 +34,7 @@ func (s *Server) Watch() {
 	if err == nil {
 		for _, srv := range services {
 			for _, node := range srv.Nodes {
-				s.AddNode(node.Address)
+				pool.DefaultGrpcConnPool.AddNode(node.Address)
 				log.Infof("add node %s :%s", srv.Name, node.Address)
 			}
 		}
@@ -88,31 +54,27 @@ func (s *Server) Watch() {
 				continue
 			}
 			var name = res.Service.Name
-			if name == "live-chat.chat" {
+			if name != s.RegistryService.Name {
 				switch res.Action {
-				case "create":
+				case registry.Create.String():
 					for _, node := range res.Service.Nodes {
-						s.AddNode(node.Address)
+						pool.DefaultGrpcConnPool.AddNode(node.Address)
 						log.Infof("----new node %s :%s", name, node.Address)
 					}
-				case "update":
+				case registry.Update.String():
 					for _, node := range res.Service.Nodes {
-						s.UpdateNode(node.Address)
+						pool.DefaultGrpcConnPool.AddNode(node.Address)
 						log.Infof("----update node %s :%s", name, node.Address)
 					}
-				case "delete":
+				case registry.Delete.String():
 					for _, node := range res.Service.Nodes {
-						s.DeleteNode(node.Address)
+						pool.DefaultGrpcConnPool.AddNode(node.Address)
 						log.Infof("----del node %s :%s", name, node.Address)
 					}
 				default:
 					for _, node := range res.Service.Nodes {
 						log.Infof("----not cased, %s node %s :%s", res.Action, name, node.Address)
 					}
-				}
-			} else {
-				for _, node := range res.Service.Nodes {
-					log.Infof("%s node %s :%s", res.Action, name, node.Address)
 				}
 			}
 		}

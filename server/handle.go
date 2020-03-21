@@ -4,6 +4,7 @@ import (
 	"go-lib/log"
 	"go-lib/utils"
 	"net"
+	"net/http"
 	"voip/av"
 	"voip/rw"
 
@@ -53,27 +54,38 @@ func (s *Server) handleWs(conn *websocket.Conn) {
 	s.handleReader(wsRw)
 }
 
+func (s *Server) HandleHttp(w http.ResponseWriter, r *http.Request) {
+	var httpRw = rw.NewHttpReaderWriter(w, r.Response.Body)
+	s.handleHttpReader(httpRw)
+}
+
 func (s *Server) handleHttpReader(readerWriter rw.ReaderWriterCloser) {
-	// //获取token,roomId
-	// if len(buf) < 32+4 {
-	// 	return
-	// }
-	// var token = strings.TrimSpace(string(buf[:32]))
-	// var rid = utils.BytesToInt32(buf[32:])
-	// uid, ok := s.GetToken(token)
-	// if !ok { //鉴权
-	// 	log.Warnf("access denied, uid:%s", uid)
-	// 	return
-	// }
-	// r, ok := s.GetRoom(rid)
-	// if !ok {
-	// 	log.Warnf("access denied,  rid:%d", rid)
-	// 	return
-	// }
-	// if !r.InRoom(uid) {
-	// 	log.Warnf("access denied,rid:%d, uid:%s", rid, uid)
-	// 	return
-	// }
+	uid, rid, ok := s.Auth(readerWriter)
+	if !ok {
+		return
+	}
+	var tsBuf = make([]byte, 8)
+	readerWriter.Read(tsBuf)
+	var ts = utils.BytesToUint64(tsBuf)
+	r, ok := s.GetRoom(rid)
+	if ok {
+		gop := r.GetGopCache(uid, ts)
+		if gop == nil {
+			return
+		}
+		var vl = len(gop.Video)
+		var al = len(gop.Audio)
+
+		for i := 0; i < al || i < vl; i++ {
+			if i < al {
+				readerWriter.Write(gop.Audio[i].Data)
+			}
+			if i < vl {
+				readerWriter.Write(gop.Video[i].Data)
+			}
+		}
+
+	}
 }
 
 func (s *Server) handleReader(readerWriter rw.ReaderWriterCloser) {

@@ -9,8 +9,8 @@ import (
 )
 
 func (s *Server) LeaveRoom(uid int64) {
-	var addr, client = s.GetRandomChatClient()
-	if addr == "" {
+	var client, ok = s.GetRandomRoomClient()
+	if !ok {
 		return
 	}
 
@@ -25,8 +25,8 @@ func (s *Server) LeaveRoom(uid int64) {
 }
 
 func (s *Server) JoinRoom(uid int64, rid int32, p string) {
-	var addr, client = s.GetRandomChatClient()
-	if addr == "" {
+	var client, ok = s.GetRandomRoomClient()
+	if !ok {
 		return
 	}
 	if client != nil {

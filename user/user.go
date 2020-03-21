@@ -12,6 +12,7 @@ type RoomUser struct {
 	Avlible   bool
 	VideoPush bool
 	AudioPush bool
+	Ts        int64
 	// Token     string
 }
 

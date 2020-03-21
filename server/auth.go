@@ -29,8 +29,13 @@ func (s *Server) Auth(readerWriter rw.ReaderWriterCloser) (uid int64, rid int32,
 		log.Warnf("access denied, uid:%d", uid)
 		return
 	}
+	if _, ok = readerWriter.(*rw.HttpReaderWriter); ok {
+		_, ok = r.Users[uid]
+		return
+	}
 
 	if !r.JoinRoom(uid, readerWriter) {
+		ok = false
 		log.Warnf("access denied, roomId:%d, uid:%d", rid, uid)
 		return
 	}

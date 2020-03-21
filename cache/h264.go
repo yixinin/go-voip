@@ -3,8 +3,8 @@ package cache
 import "voip/av"
 
 type Gop struct {
-	video []*av.Packet
-	audio []*av.Packet
+	Video []*av.Packet
+	Audio []*av.Packet
 	ts    uint64
 }
 
@@ -29,8 +29,8 @@ func (c *Cache) Put(p *av.Packet) {
 	if p.IsVideo() {
 		if p.IsKeyFrame() { //新起一个gop
 			var g = &Gop{
-				video: make([]*av.Packet, 0, 5),
-				audio: make([]*av.Packet, 0, 5),
+				Video: make([]*av.Packet, 0, 5),
+				Audio: make([]*av.Packet, 0, 5),
 				ts:    p.TimeStamp,
 			}
 			if c.index >= c.cap { //满了 移除第一个
@@ -45,13 +45,13 @@ func (c *Cache) Put(p *av.Packet) {
 		if c.index == 0 {
 			return
 		}
-		c.gop[c.index-1].video = append(c.gop[c.index-1].video, p)
+		c.gop[c.index-1].Video = append(c.gop[c.index-1].Video, p)
 		return
 	}
 	if c.index == 0 {
 		return
 	}
-	c.gop[c.index-1].audio = append(c.gop[c.index-1].audio, p)
+	c.gop[c.index-1].Audio = append(c.gop[c.index-1].Audio, p)
 }
 
 //Get 传入最后一次获取时间戳

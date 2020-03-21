@@ -3,6 +3,7 @@ package room
 import (
 	"log"
 	"sync"
+	"time"
 	"voip/av"
 	"voip/cache"
 	"voip/protocol"
@@ -85,4 +86,12 @@ func (r *Room) Broadcast(p *av.Packet) {
 	}
 	//缓存
 	r.cache.Put(p)
+}
+
+func (r *Room) GetGopCache(uid int64, ts uint64) *cache.Gop {
+	if _, ok := r.Users[uid]; ok {
+		r.Users[uid].Ts = time.Now().Unix()
+		return r.cache.Get(ts)
+	}
+	return nil
 }
