@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"go-lib/ip"
-	"go-lib/log"
 	"time"
 	"voip/protocol"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (s *Server) LeaveRoom(uid int64) {
@@ -33,9 +34,8 @@ func (s *Server) JoinRoom(uid int64, rid int32, p string) {
 		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_, err := client.JoinRoom(ctx, &protocol.JoinRoomReq{
-			RoomId:   rid,
-			Addr:     ip.GetAddr(s.config.GrpcPort),
-			Protocol: p,
+			RoomId: rid,
+			Addr:   ip.GetAddr(s.config.GrpcPort),
 			User: &protocol.RoomUser{
 				Uid: uid,
 			},

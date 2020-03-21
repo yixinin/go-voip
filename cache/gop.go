@@ -42,6 +42,7 @@ func (c *Cache) Put(p *av.Packet) {
 			c.gop = append(c.gop, g)
 			return
 		}
+		//没有关键帧  丢弃这个包
 		if c.index == 0 {
 			return
 		}

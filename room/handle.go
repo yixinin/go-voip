@@ -1,7 +1,7 @@
 package room
 
 import (
-	"go-lib/log"
+	log "github.com/sirupsen/logrus"
 )
 
 func (r *Room) handlePacket() {

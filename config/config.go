@@ -2,6 +2,9 @@ package config
 
 import (
 	"io/ioutil"
+	"os"
+
+	log "github.com/sirupsen/logrus"
 
 	"gopkg.in/yaml.v2"
 )
@@ -23,4 +26,13 @@ func ParseConfig(path string) (*Config, error) {
 	var conf Config
 	err = yaml.Unmarshal(yamlFile, &conf)
 	return &conf, err
+}
+
+func init() {
+	log.SetOutput(os.Stdout)
+	log.SetFormatter(&log.TextFormatter{
+		DisableColors: false,
+		FullTimestamp: true,
+	})
+	// log.SetReportCaller(true)
 }

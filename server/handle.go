@@ -1,12 +1,13 @@
 package server
 
 import (
-	"go-lib/log"
 	"go-lib/utils"
 	"net"
 	"net/http"
 	"voip/av"
 	"voip/rw"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
 )

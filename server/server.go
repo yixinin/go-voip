@@ -11,9 +11,10 @@ import (
 	"voip/room"
 	"voip/user"
 
-	"go-lib/log"
 	"go-lib/registry"
 	"go-lib/registry/etcd"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
 	"google.golang.org/grpc"
@@ -37,7 +38,7 @@ type Server struct {
 
 	Registry        registry.Registry
 	RegistryService *registry.Service
-	watcher         registry.Watcher
+	// watcher         registry.Watcher
 
 	chatClients map[string]protocol.ChatServiceClient
 
@@ -87,13 +88,9 @@ func NewServer(c *config.Config) *Server {
 	}()
 	s.Registry.Init(
 		registry.Addrs(s.config.EtcdAddr...),
+		registry.Secure(false),
+		// registry.Timeout(10*time.Second),
 	)
-	watcher, err := s.Registry.Watch()
-	if err != nil {
-		log.Error(err)
-		return s
-	}
-	s.watcher = watcher
 	return s
 }
 
@@ -101,6 +98,11 @@ func (s *Server) Shutdown() {
 	if s.stoped {
 		return
 	}
-	close(s.stop)
-	s.stoped = true
+	select {
+	case <-s.stop:
+		return
+	default:
+		close(s.stop)
+		s.stoped = true
+	}
 }

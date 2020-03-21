@@ -1,9 +1,10 @@
 package server
 
 import (
-	"go-lib/log"
 	"voip/protocol"
 	"voip/room"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type CreateRoom struct {
@@ -30,14 +31,9 @@ FOR:
 	for {
 		select {
 		case <-s.stop:
-			err := s.Registry.Deregister(s.RegistryService)
-			if err != nil {
-				log.Error(err)
-			}
 			for _, r := range s.rooms {
 				close(r.PktChan)
 			}
-
 			return
 		case rid := <-s.closeRoomChan:
 			s.DelRoom(rid)

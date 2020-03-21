@@ -4,18 +4,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"go-lib/ip"
-	"go-lib/log"
+	"go-lib/utils"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"time"
 	"voip/rw"
-	"go-lib/utils"
+
+	log "github.com/sirupsen/logrus"
 
 	"go-lib/registry"
 )
 
-const ()
+const (
+	ChatServiceName = "live-chat.chat"
+)
 
 func (s *Server) Serve() error {
 
@@ -41,7 +44,12 @@ func (s *Server) Serve() error {
 	}
 	s.RegistryService = srv
 	s.Registry.Register(srv, registry.RegisterTTL(5*time.Second))
-	go s.Watch()
+	watcher, err := s.Registry.Watch(registry.WatchService(ChatServiceName))
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	go s.Watch(watcher)
 	return nil
 }
 

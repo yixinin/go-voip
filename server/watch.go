@@ -1,11 +1,12 @@
 package server
 
 import (
-	"go-lib/log"
 	"go-lib/pool"
 	"voip/protocol"
 
-	"github.com/micro/go-micro/v2/registry"
+	log "github.com/sirupsen/logrus"
+
+	"go-lib/registry"
 )
 
 func (s *Server) GetRoomClient(addr string) (protocol.ChatServiceClient, bool) {
@@ -24,55 +25,84 @@ func (s *Server) GetRandomRoomClient() (protocol.ChatServiceClient, bool) {
 	return protocol.NewChatServiceClient(conn), true
 }
 
-func (s *Server) Watch() {
+func (s *Server) Watch(watcher registry.Watcher) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Error(err)
+			log.Error("watcher recovered ", err)
 		}
 	}()
-	services, err := s.Registry.GetService("live-chat.chat")
-	if err == nil {
-		for _, srv := range services {
-			for _, node := range srv.Nodes {
-				pool.DefaultGrpcConnPool.AddNode(node.Address)
-				log.Infof("add node %s :%s", srv.Name, node.Address)
+
+	services, err := s.Registry.GetService(ChatServiceName)
+	if err != nil {
+		log.Error(err)
+	} else {
+		if services != nil {
+			for _, srv := range services {
+				if srv == nil || srv.Nodes == nil {
+					continue
+				}
+				for _, node := range srv.Nodes {
+					if node == nil {
+						continue
+					}
+					pool.DefaultGrpcConnPool.AddNode(node.Address)
+					log.Infof("add node %s :%s", srv.Name, node.Address)
+				}
 			}
 		}
-	} else {
-		log.Error(err)
+
 	}
 
+FOR:
 	for {
 		select {
 		case <-s.stop:
+			log.Info("exit ...")
+			err := s.Registry.Deregister(s.RegistryService)
+			if err != nil {
+				log.Error(err)
+			}
 			return
 		default:
-
-			res, err := s.watcher.Next()
-			if err != nil {
-				log.Error("netx err:%v", err)
-				continue
+			res, err := watcher.Next()
+			if err != nil || res == nil || res.Service == nil || res.Service.Nodes == nil {
+				if err != nil {
+					log.Error(err)
+				}
+				continue FOR
 			}
 			var name = res.Service.Name
 			if name != s.RegistryService.Name {
 				switch res.Action {
 				case registry.Create.String():
 					for _, node := range res.Service.Nodes {
+						if node == nil {
+							continue FOR
+						}
 						pool.DefaultGrpcConnPool.AddNode(node.Address)
 						log.Infof("----new node %s :%s", name, node.Address)
 					}
 				case registry.Update.String():
 					for _, node := range res.Service.Nodes {
+						if node == nil {
+							continue FOR
+						}
 						pool.DefaultGrpcConnPool.AddNode(node.Address)
 						log.Infof("----update node %s :%s", name, node.Address)
 					}
 				case registry.Delete.String():
 					for _, node := range res.Service.Nodes {
+						if node == nil {
+							continue FOR
+						}
 						pool.DefaultGrpcConnPool.AddNode(node.Address)
 						log.Infof("----del node %s :%s", name, node.Address)
 					}
 				default:
 					for _, node := range res.Service.Nodes {
+						if node == nil {
+							continue FOR
+						}
 						log.Infof("----not cased, %s node %s :%s", res.Action, name, node.Address)
 					}
 				}

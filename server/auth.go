@@ -1,10 +1,11 @@
 package server
 
 import (
-	"go-lib/log"
 	"go-lib/utils"
 	"strings"
 	"voip/rw"
+
+	log "github.com/sirupsen/logrus"
 )
 
 func (s *Server) Auth(readerWriter rw.ReaderWriterCloser) (uid int64, rid int32, ok bool) {
