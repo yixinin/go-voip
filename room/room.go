@@ -5,6 +5,7 @@ import (
 	"log"
 	"sync"
 	"voip/av"
+	"voip/cache"
 	"voip/protocol"
 	"voip/user"
 )
@@ -14,7 +15,7 @@ type Room struct {
 	RoomId  int32
 	PktChan chan *av.Packet
 	Users   map[string]*user.User
-
+	cache   *cache.Cache
 	// Stop chan bool
 }
 
@@ -24,6 +25,7 @@ func NewRoom(id int32, us []*protocol.RoomUser) *Room {
 		Users:  make(map[string]*user.User, len(us)),
 		// Stop:    make(chan bool),
 		PktChan: make(chan *av.Packet, 100),
+		cache:   cache.NewCache(),
 	}
 	for _, u := range us {
 		room.Users[u.Uid] = &user.User{
@@ -80,4 +82,6 @@ func (r *Room) Broadcast(p *av.Packet) {
 			u.Writer.Write(p.Data)
 		}
 	}
+	//缓存
+	r.cache.Put(p)
 }

@@ -44,7 +44,7 @@ func main() {
 }
 
 func showIP(port string) {
-	log.Println("本机IP:", ip.GrpcAddr(port))
+	log.Println("本机IP:", ip.GetAddr(port))
 }
 
 func createRoom() {

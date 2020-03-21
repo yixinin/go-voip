@@ -36,7 +36,7 @@ func (s *RoomServer) CreateRoom(ctx context.Context, req *protocol.CreateRoomReq
 		RoomId: utils.GetRoomID(),
 	}
 	ack.RoomId = rid
-	ack.TcpAddr = ip.GrpcAddr(s.config.TcpPort)
+	ack.TcpAddr = ip.GetAddr(s.config.TcpPort)
 	ack.WsAddr = fmt.Sprintf("ws://%s/ws/live", ip.GetAddr(s.config.HttpPort))
 	ack.HttpAddr = fmt.Sprintf("http://%s/http/live", ip.GetAddr(s.config.HttpPort))
 	return
