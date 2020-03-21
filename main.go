@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"go-lib/ip"
 	"log"
 	"net/http"
@@ -25,7 +26,12 @@ func main() {
 
 	var server = server.NewServer(conf)
 	server.Serve()
-	showIP(conf.GrpcPort)
+
+	{ //测试
+		createRoom(conf.HttpPort)
+		showIP(conf.GrpcPort)
+	}
+
 	//监听退出信号
 	c := make(chan os.Signal)
 	//监听所有信号
@@ -36,7 +42,7 @@ func main() {
 		case sig := <-c:
 			switch sig {
 			case os.Interrupt:
-				server.Stop <- true
+				server.Shutdown()
 			}
 			return
 		}
@@ -47,7 +53,7 @@ func showIP(port string) {
 	log.Println("本机IP:", ip.GetAddr(port))
 }
 
-func createRoom() {
+func createRoom(port string) {
 	var body = `{"RoomId":10240,"Users":[{"Uid":102,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000000"},{"Uid":104,"VideoPush":true,"AudioPush":true,"Token":"00000000000000000000000000000001"}]}`
-	http.DefaultClient.Post("http://localhost:9902/createRoom", "application/json", strings.NewReader(body))
+	http.DefaultClient.Post(fmt.Sprintf("http://localhost:%s/createRoom", port), "application/json", strings.NewReader(body))
 }

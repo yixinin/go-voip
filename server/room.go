@@ -17,7 +17,7 @@ type JoinRoom struct {
 
 type LeaveRoom struct {
 	RoomId int32
-	Uid    string
+	Uid    int64
 }
 
 func (s *Server) manageRoomUser() {
@@ -29,21 +29,15 @@ func (s *Server) manageRoomUser() {
 FOR:
 	for {
 		select {
-		case <-s.Stop:
+		case <-s.stop:
 			err := s.Registry.Deregister(s.RegistryService)
 			if err != nil {
 				log.Error(err)
 			}
-			s.stopWatch <- true
-			for _, r := range s.Rooms {
+			for _, r := range s.rooms {
 				close(r.PktChan)
 			}
-			for _, stop := range s.stopTcp {
-				stop <- true
-			}
-			for _, stop := range s.stopWs {
-				stop <- true
-			}
+
 			return
 		case rid := <-s.closeRoomChan:
 			s.DelRoom(rid)
@@ -52,7 +46,7 @@ FOR:
 
 			var r = room.NewRoom(createRoom.RoomId, createRoom.Users)
 			s.AddRoom(r)
-			s.AddUsers(createRoom.Users)
+			s.AddUsers(createRoom.Users, createRoom.RoomId)
 
 		case joinRoom := <-s.joinRoomChan:
 			r, ok := s.GetRoom(joinRoom.RoomId)
@@ -61,7 +55,7 @@ FOR:
 				continue FOR
 			}
 			r.JoinRoom(joinRoom.User.Uid, nil)
-			s.AddUser(joinRoom.User.Uid, joinRoom.User.Token)
+			s.AddUser(joinRoom.User, joinRoom.RoomId)
 
 		case leaveRoom := <-s.leaveRoomChan:
 			r, ok := s.GetRoom(leaveRoom.RoomId)
@@ -73,5 +67,36 @@ FOR:
 			s.DelUser(leaveRoom.Uid)
 		default:
 		}
+	}
+}
+
+func (s *Server) GetRooms() map[int32]*room.Room {
+	s.RLock()
+	defer s.RUnlock()
+	return s.rooms
+}
+
+func (s *Server) GetRoom(rid int32) (*room.Room, bool) {
+	s.RLock()
+	defer s.RUnlock()
+	r, ok := s.rooms[rid]
+	return r, ok
+}
+func (s *Server) AddRoom(r *room.Room) {
+	s.Lock()
+	defer s.Unlock()
+	if _, ok := s.rooms[r.RoomId]; ok {
+		log.Warnf("repeat room: %d, ignore", r.RoomId)
+		return
+	}
+	s.rooms[r.RoomId] = r
+}
+
+func (s *Server) DelRoom(rid int32) {
+	s.Lock()
+	defer s.Unlock()
+	if r, ok := s.rooms[rid]; ok {
+		close(r.PktChan)
+		delete(s.rooms, rid)
 	}
 }

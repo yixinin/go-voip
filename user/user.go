@@ -1,16 +1,23 @@
 package user
 
 import (
-	"bufio"
+	"voip/rw"
 )
 
-type User struct {
-	Uid string
+type RoomUser struct {
+	Uid int64
 	// RoomId int64
 	// Reader bufio.Reader
-	Writer    *bufio.Writer
+	Writer    rw.WriterCloser
 	Avlible   bool
 	VideoPush bool
 	AudioPush bool
 	// Token     string
+}
+
+type User struct {
+	Token  string
+	RoomId int32
+	Uid    int64
+	Addr   string //chat服务器
 }

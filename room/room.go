@@ -1,12 +1,12 @@
 package room
 
 import (
-	"bufio"
 	"log"
 	"sync"
 	"voip/av"
 	"voip/cache"
 	"voip/protocol"
+	"voip/rw"
 	"voip/user"
 )
 
@@ -14,21 +14,22 @@ type Room struct {
 	sync.RWMutex
 	RoomId  int32
 	PktChan chan *av.Packet
-	Users   map[string]*user.User
 	cache   *cache.Cache
+	Users   map[int64]*user.RoomUser
+
 	// Stop chan bool
 }
 
 func NewRoom(id int32, us []*protocol.RoomUser) *Room {
 	var room = &Room{
 		RoomId: id,
-		Users:  make(map[string]*user.User, len(us)),
+		Users:  make(map[int64]*user.RoomUser, len(us)),
 		// Stop:    make(chan bool),
 		PktChan: make(chan *av.Packet, 100),
 		cache:   cache.NewCache(),
 	}
 	for _, u := range us {
-		room.Users[u.Uid] = &user.User{
+		room.Users[u.Uid] = &user.RoomUser{
 			Uid:       u.Uid,
 			VideoPush: u.VideoPush,
 			AudioPush: u.AudioPush,
@@ -38,27 +39,27 @@ func NewRoom(id int32, us []*protocol.RoomUser) *Room {
 	return room
 }
 
-func (r *Room) JoinRoom(uid string, writer *bufio.Writer) bool {
+func (r *Room) JoinRoom(uid int64, readerWriter rw.ReaderWriterCloser) bool {
 	r.Lock()
 	defer r.Unlock()
 	if _, ok := r.Users[uid]; !ok {
 		return false
 	}
-	r.Users[uid].Writer = writer
+	r.Users[uid].Writer = readerWriter
 	r.Users[uid].Avlible = true
 	return true
 }
 
-func (r *Room) InRoom(uid string) bool {
+func (r *Room) InRoom(uid int64) bool {
 	_, ok := r.Users[uid]
 	return ok
 }
 
-func (r *Room) LeaveRoom(uid string) {
+func (r *Room) LeaveRoom(uid int64) {
 	r.Lock()
 	defer r.Unlock()
 	if _, ok := r.Users[uid]; ok {
-		r.Users[uid].Writer = nil
+		r.Users[uid].Writer.Close()
 		r.Users[uid].Avlible = false
 	}
 }
