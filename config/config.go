@@ -16,6 +16,7 @@ type Config struct {
 	HttpPort string   `yaml:"http_port"`
 	GrpcPort string   `yaml:"grpc_port"`
 	EtcdAddr []string `yaml:"etcd"`
+	Host     string   `yaml:"host"`
 }
 
 func ParseConfig(path string) (*Config, error) {

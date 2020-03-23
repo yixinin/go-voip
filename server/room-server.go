@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"go-lib/ip"
 	"go-lib/utils"
 	"voip/config"
 	"voip/protocol"
@@ -42,9 +41,9 @@ func (s *RoomServer) CreateRoom(ctx context.Context, req *protocol.CreateRoomReq
 	}
 
 	ack.RoomId = rid
-	ack.TcpAddr = ip.GetAddr(s.config.TcpPort)
-	ack.WsAddr = fmt.Sprintf("ws://%s/ws/live", ip.GetAddr(s.config.HttpPort))
-	ack.HttpAddr = fmt.Sprintf("http://%s/http/live", ip.GetAddr(s.config.HttpPort))
+	ack.TcpAddr = fmt.Sprintf("%s:%s", s.config.Host, s.config.TcpPort)
+	ack.WsAddr = fmt.Sprintf("ws://%s:%s/ws/live", s.config.Host, s.config.HttpPort)
+	ack.HttpAddr = fmt.Sprintf("http://%s:%s/http/live", s.config.Host, s.config.HttpPort)
 	return
 }
 
