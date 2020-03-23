@@ -28,7 +28,7 @@ func main() {
 	server.Serve()
 
 	{ //测试
-		createRoom(conf.HttpPort)
+		// createRoom(conf.HttpPort)
 		showIP(conf.GrpcPort)
 	}
 

@@ -98,7 +98,7 @@ func (s *Server) handleReader(readerWriter rw.ReaderWriterCloser) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Warn("reader serve panic: ", r)
+			log.Error("reader serve panic: ", r)
 		}
 		log.Warn(" Disconnected : ", uid)
 		//删除用户
@@ -116,14 +116,14 @@ func (s *Server) handleReader(readerWriter rw.ReaderWriterCloser) {
 
 func (s *Server) hanldePacket(readerWriter rw.ReaderCloser, rid int32, uid int64) {
 	for {
-		//数据包格式 1+1+4 frameType + dataType + dataLength
-		var header = make([]byte, 2+4)
+		//数据包格式 1+1+4 frameType + dataType + dataLength + timestamp
+		var header = make([]byte, 2+4+8)
 		n1, err := readerWriter.Read(header)
 		if err != nil {
 			log.Warn("read buffer error:", err)
 			return
 		}
-		length := utils.BytesToUint32(header[2:])
+		length := utils.BytesToUint32(header[2 : 2+4])
 
 		// log.Warn(header)
 
@@ -131,7 +131,7 @@ func (s *Server) hanldePacket(readerWriter rw.ReaderCloser, rid int32, uid int64
 			log.Warnf("header length:%d, body expect length:%d", n1, length)
 			continue
 		}
-
+		// ts := utils.BytesToUint64(header[2+4:])
 		var body = make([]byte, length)
 
 		read := 0

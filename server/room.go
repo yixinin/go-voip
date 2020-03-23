@@ -36,8 +36,8 @@ FOR:
 			}
 			return
 		case rid := <-s.closeRoomChan:
-			s.DelRoom(rid)
 
+			s.DelRoom(rid)
 		case createRoom := <-s.createRoomChan:
 
 			var r = room.NewRoom(createRoom.RoomId, createRoom.Users)
@@ -86,6 +86,7 @@ func (s *Server) AddRoom(r *room.Room) {
 		return
 	}
 	s.rooms[r.RoomId] = r
+	log.Warnf("add room, id=%d, users:%+v", r.RoomId, r.Users)
 }
 
 func (s *Server) DelRoom(rid int32) {

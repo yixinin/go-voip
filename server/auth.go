@@ -21,7 +21,7 @@ func (s *Server) Auth(readerWriter rw.ReaderWriterCloser) (uid int64, rid int32,
 
 	u, ok := s.GetUser(token)
 	if !ok { //鉴权
-		log.Warnf("access denied, token:%s", token)
+		log.Warnf("access denied, rid:%d, token:%s", rid, token)
 		return
 	}
 	uid = u.Uid
