@@ -34,7 +34,7 @@ func (s *Server) JoinRoom(uid int64, rid int32, p string) {
 		defer cancel()
 		_, err := client.JoinRoom(ctx, &protocol.JoinRoomReq{
 			RoomId: rid,
-			Addr:   s.config.GrpcPort,
+			Addr:   s.config.GrpcHost + s.config.GrpcAddr,
 			User: &protocol.RoomUser{
 				Uid: uid,
 			},

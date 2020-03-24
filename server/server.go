@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"math/rand"
 	"net"
 	"sync"
@@ -75,7 +74,7 @@ func NewServer(c *config.Config) *Server {
 	var srv = grpc.NewServer()
 	var rs = NewRoomServer(s.createRoomChan, s.joinRoomChan, s.leaveRoomChan, s.closeRoomChan, s.config)
 	protocol.RegisterRoomServiceServer(srv, rs)
-	var listen, err = net.Listen("tcp", fmt.Sprintf(":%s", s.config.GrpcPort))
+	var listen, err = net.Listen("tcp", s.config.GrpcAddr)
 	if err != nil {
 		log.Error(err)
 	}

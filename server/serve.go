@@ -37,7 +37,7 @@ func (s *Server) Serve() error {
 		Nodes: []*registry.Node{
 			&registry.Node{
 				Id:      utils.UUID(),
-				Address: s.config.GrpcPort,
+				Address: s.config.GrpcHost + s.config.GrpcAddr,
 			},
 		},
 	}
