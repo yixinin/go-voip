@@ -14,7 +14,7 @@ type Config struct {
 	TcpPort  string   `yaml:"tcp_port"`
 	ListenIp string   `yaml:"listen_ip"`
 	HttpPort string   `yaml:"http_port"`
-	GrpcAddr string   `yaml:"grpc_Addr"`
+	GrpcAddr string   `yaml:"grpc_addr"`
 	GrpcHost string   `yaml:"grpc_host"`
 	EtcdAddr []string `yaml:"etcd"`
 	Host     string   `yaml:"host"`
