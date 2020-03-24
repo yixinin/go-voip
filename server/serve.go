@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"go-lib/ip"
 	"go-lib/utils"
 	"io/ioutil"
 	"net"
@@ -38,7 +37,7 @@ func (s *Server) Serve() error {
 		Nodes: []*registry.Node{
 			&registry.Node{
 				Id:      utils.UUID(),
-				Address: ip.GetAddr(s.config.GrpcPort),
+				Address: s.config.GrpcPort,
 			},
 		},
 	}
