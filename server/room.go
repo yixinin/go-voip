@@ -61,7 +61,6 @@ FOR:
 			}
 			r.LeaveRoom(leaveRoom.Uid)
 			s.DelUser(leaveRoom.Uid)
-		default:
 		}
 	}
 }

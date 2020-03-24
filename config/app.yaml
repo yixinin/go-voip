@@ -10,6 +10,6 @@ protocol:
 listen_ip: "0.0.0.0"
 tcp_port: "9901"
 http_port: "9902"
-grpc_addr: "8282"
+grpc_addr: ":8282"
 grpc_host: 127.0.0.1
 host: 10.0.0.218
