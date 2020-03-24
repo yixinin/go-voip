@@ -29,7 +29,7 @@ func main() {
 
 	{ //测试
 		// createRoom(conf.HttpPort)
-		showIP(conf.GrpcPort)
+		showIP(conf.GrpcHost + conf.GrpcAddr)
 	}
 
 	//监听退出信号
