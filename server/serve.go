@@ -77,6 +77,28 @@ func (s *Server) ServeSocket() {
 	}
 }
 
+func (s *Server) ServeUDP() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Error(err)
+		}
+	}()
+	//定义一个tcp断点
+	var udpAddr *net.UDPAddr
+	udpAddr, _ = net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%s", s.config.ListenIp, s.config.TcpPort))
+	udpListener, _ := net.ListenUDP("udp", udpAddr)
+
+	for {
+		var data = make([]byte, 1024)
+		n, remoteAddr, err := udpListener.ReadFromUDP(data)
+		if err != nil {
+			continue
+		}
+		log.Println(n, remoteAddr)
+
+	}
+}
+
 func (s *Server) ServeWs() {
 	var addr = fmt.Sprintf("%s:%s", s.config.ListenIp, s.config.HttpPort)
 	http.HandleFunc("/live/ws", func(w http.ResponseWriter, r *http.Request) {
