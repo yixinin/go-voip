@@ -2,6 +2,7 @@ package room
 
 import (
 	"log"
+	"net"
 	"sync"
 	"time"
 	"voip/av"
@@ -18,6 +19,7 @@ type Room struct {
 	cache   *cache.Cache
 	Users   map[int64]*user.RoomUser
 
+	UdpConn *net.UDPConn
 	// Stop chan bool
 }
 
@@ -65,22 +67,43 @@ func (r *Room) LeaveRoom(uid int64) {
 	}
 }
 
-func (r *Room) Broadcast(p *av.Packet) {
+func (r *Room) BroadcastUdp(p *av.Packet) {
 	defer func() {
 		if err := recover(); err != nil {
-			log.Printf("Broadcast error:%v", err)
+			log.Printf("BroadcastUdp error:%v", err)
 		}
 	}()
 	r.RLock()
 	defer r.RUnlock()
 
-	log.Printf("header:%v, uid:%d", p.Data[:6], p.Uid)
+	for _, u := range r.Users {
+		if u != nil &&
+			u.Uid != p.Uid && //不给自己发
+			u.Avlible && //在线
+			u.UdpAddr != nil {
+
+			r.UdpConn.WriteToUDP(p.Data, u.UdpAddr)
+		}
+	}
+	//缓存
+	r.cache.Put(p)
+}
+
+func (r *Room) Broadcast(p *av.Packet) {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Printf("BroadcastUdp error:%v", err)
+		}
+	}()
+	r.RLock()
+	defer r.RUnlock()
 
 	for _, u := range r.Users {
 		if u != nil &&
 			u.Uid != p.Uid && //不给自己发
 			u.Avlible && //在线
 			u.Writer != nil {
+
 			u.Writer.Write(p.Data)
 		}
 	}

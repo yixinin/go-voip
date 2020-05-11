@@ -1,6 +1,7 @@
 package user
 
 import (
+	"net"
 	"voip/rw"
 )
 
@@ -14,6 +15,7 @@ type RoomUser struct {
 	AudioPush bool
 	Ts        int64
 	// Token     string
+	UdpAddr *net.UDPAddr // remote udp addr
 }
 
 type User struct {

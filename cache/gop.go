@@ -58,7 +58,7 @@ func (c *Cache) Put(p *av.Packet) {
 //Get 传入最后一次获取时间戳
 func (c *Cache) Get(ts uint64) *Gop {
 	for _, v := range c.gop {
-		if ts > v.ts {
+		if ts < v.ts {
 			return v
 		}
 	}

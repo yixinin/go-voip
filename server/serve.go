@@ -85,17 +85,17 @@ func (s *Server) ServeUDP() {
 	}()
 	//定义一个tcp断点
 	var udpAddr *net.UDPAddr
-	udpAddr, _ = net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%s", s.config.ListenIp, s.config.TcpPort))
-	udpListener, _ := net.ListenUDP("udp", udpAddr)
-
-	for {
-		var data = make([]byte, 1024)
-		n, remoteAddr, err := udpListener.ReadFromUDP(data)
-		if err != nil {
-			continue
-		}
-		log.Println(n, remoteAddr)
-
+	udpAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%s", s.config.ListenIp, s.config.TcpPort))
+	if err != nil {
+		return
+	}
+	udpListener, err := net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return
+	}
+	s.udpConn = udpListener
+	for i := 0; i < 10; i++ {
+		go s.handleUdp(udpListener)
 	}
 }
 

@@ -2,6 +2,7 @@ package rw
 
 const (
 	ProtocolTCP  = "tcp"
+	ProtocolUDP  = "udp"
 	ProtocolWS   = "ws"
 	ProtocolHttp = "http"
 )

@@ -50,6 +50,8 @@ type Server struct {
 	stoped bool
 
 	config *config.Config
+
+	udpConn *net.UDPConn
 }
 
 func NewServer(c *config.Config) *Server {

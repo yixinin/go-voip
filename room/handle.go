@@ -14,6 +14,7 @@ func (r *Room) handlePacket() {
 	for p := range r.PktChan {
 		//推送
 		go r.Broadcast(p)
+		go r.BroadcastUdp(p)
 	}
 	return
 }
