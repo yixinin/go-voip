@@ -2,7 +2,8 @@ package user
 
 import (
 	"net"
-	"voip/rw"
+
+	"github.com/yixinin/go-voip/rw"
 )
 
 type RoomUser struct {

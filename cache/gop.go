@@ -1,6 +1,6 @@
 package cache
 
-import "voip/av"
+import "github.com/yixinin/go-voip/av"
 
 type Gop struct {
 	Video []*av.Packet

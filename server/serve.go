@@ -3,16 +3,14 @@ package server
 import (
 	"encoding/json"
 	"fmt"
-	"go-lib/utils"
 	"io/ioutil"
 	"net"
 	"net/http"
-	"time"
-	"voip/rw"
+
+	"github.com/yixinin/go-voip/id"
+	"github.com/yixinin/go-voip/rw"
 
 	log "github.com/sirupsen/logrus"
-
-	"go-lib/registry"
 )
 
 const (
@@ -20,35 +18,16 @@ const (
 )
 
 func (s *Server) Serve() error {
-
 	for _, v := range s.config.Protocol {
 		if v == ProtocolTCP {
 			go s.ServeSocket()
 		}
-		if v == ProtocolTCP {
-			s.ServeWs()
+		if v == ProtocolWebSocket {
+			go s.ServeWs()
 		}
 	}
 	go s.ServeHttp()
 	go s.manageRoomUser()
-	var srv = &registry.Service{
-		Name:    "live-chat.voip",
-		Version: "v1.0",
-		Nodes: []*registry.Node{
-			&registry.Node{
-				Id:      utils.UUID(),
-				Address: s.config.GrpcHost + s.config.GrpcAddr,
-			},
-		},
-	}
-	s.RegistryService = srv
-	s.Registry.Register(srv, registry.RegisterTTL(5*time.Second))
-	watcher, err := s.Registry.Watch(registry.WatchService(ChatServiceName))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	go s.Watch(watcher)
 	return nil
 }
 
@@ -123,6 +102,13 @@ func (s *Server) ServeHttp() {
 		var httpRw = rw.NewHttpReaderWriter(w, r.Body)
 		s.handleHttpReader(httpRw)
 	})
+
+	http.HandleFunc("/live/test", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("hello"))
+	})
+	http.HandleFunc("/live/push", func(w http.ResponseWriter, r *http.Request) {
+		s.handleHttp(w, r)
+	})
 	http.HandleFunc("/createRoom", func(w http.ResponseWriter, r *http.Request) {
 		buf, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -139,7 +125,7 @@ func (s *Server) ServeHttp() {
 		}
 		if len(createRoom.Users) > 1 {
 			if createRoom.RoomId == 0 {
-				createRoom.RoomId = utils.GetRoomID()
+				createRoom.RoomId = id.GenTempID()
 			}
 			s.createRoomChan <- createRoom
 		}

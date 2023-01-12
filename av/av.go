@@ -1,6 +1,6 @@
 package av
 
-import "go-lib/utils"
+import "github.com/yixinin/go-voip/bi"
 
 const (
 	_ byte = iota
@@ -21,7 +21,7 @@ func NewPacket(data []byte, uid int64) *Packet {
 	var p = &Packet{
 		isAudio:   data[1] == AudioType,
 		isVideo:   data[1] == VideoType,
-		TimeStamp: utils.BytesToUint64(data[6 : 8+6]),
+		TimeStamp: bi.BytesToInt[uint64](data[6 : 6+8]),
 		// isKeyFrame: data[6+3] == 0x65,
 		Data: data,
 		Uid:  uid,

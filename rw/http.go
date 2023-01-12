@@ -5,37 +5,36 @@ import (
 	"net/http"
 )
 
-type HttpReaderWriter struct {
+type HttpWriter struct {
+	io.ReadCloser
 	w      http.ResponseWriter
-	r      io.ReadCloser
 	closed bool
 }
 
-func NewHttpReaderWriter(w http.ResponseWriter, r io.ReadCloser) *HttpReaderWriter {
-	return &HttpReaderWriter{
-		w: w,
-		r: r,
+func NewHttpReaderWriter(w http.ResponseWriter, r io.ReadCloser) *HttpWriter {
+	return &HttpWriter{
+		ReadCloser: r,
+		w:          w,
 	}
 }
 
-func (c *HttpReaderWriter) Read(buf []byte) (n int, err error) {
-
-	return c.r.Read(buf)
+func (c *HttpWriter) Write(buf []byte) (n int, err error) {
+	n, err = c.w.Write(buf)
+	if err != nil {
+		return n, err
+	}
+	c.w.(http.Flusher).Flush()
+	return n, err
 }
 
-func (c *HttpReaderWriter) Write(buf []byte) (n int, err error) {
-
-	return c.w.Write(buf)
-}
-
-func (c *HttpReaderWriter) Close() error {
-	if c.closed {
+func (c *HttpWriter) Close() error {
+	if !c.closed {
 		c.closed = true
-		return c.r.Close()
+		return c.ReadCloser.Close()
 	}
 	return nil
 }
 
-func (*HttpReaderWriter) Name() string {
+func (*HttpWriter) Name() string {
 	return ProtocolHttp
 }

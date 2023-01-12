@@ -1,11 +1,13 @@
 package server
 
 import (
-	"go-lib/utils"
+	"fmt"
 	"net"
 	"net/http"
-	"voip/av"
-	"voip/rw"
+
+	"github.com/yixinin/go-voip/av"
+	"github.com/yixinin/go-voip/bi"
+	"github.com/yixinin/go-voip/rw"
 
 	log "github.com/sirupsen/logrus"
 
@@ -48,15 +50,29 @@ func (s *Server) handleWs(conn *websocket.Conn) {
 		conn.Close()
 	}()
 	var wsRw = rw.NewWsReaderWriter(conn)
-	//获取一个连接的reader读取流
-	// writer := bufio.NewWriter(wsConn)
-	// reader := bufio.NewReader(wsConn)
 
 	s.handleReader(wsRw)
 }
 
+func (s *Server) handleHttp(w http.ResponseWriter, r *http.Request) {
+	ipStr := r.RemoteAddr
+	defer func() {
+		if err := recover(); err != nil {
+			log.Panicf("http exited err:", err)
+		}
+		log.Warn(" Disconnected : " + ipStr)
+		r.Body.Close()
+	}()
+	var httpRw = rw.NewHttpReaderWriter(w, r.Body)
+
+	s.handleReader(httpRw)
+}
+
 func (s *Server) HandleHttp(w http.ResponseWriter, r *http.Request) {
 	var httpRw = rw.NewHttpReaderWriter(w, r.Response.Body)
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
 	s.handleHttpReader(httpRw)
 }
 
@@ -67,7 +83,7 @@ func (s *Server) handleHttpReader(readerWriter rw.ReaderWriterCloser) {
 	}
 	var tsBuf = make([]byte, 8)
 	readerWriter.Read(tsBuf)
-	var ts = utils.BytesToUint64(tsBuf)
+	var ts = bi.BytesToInt[uint64](tsBuf)
 	r, ok := s.GetRoom(rid)
 	if ok {
 		gop := r.GetGopCache(uid, ts)
@@ -91,9 +107,9 @@ func (s *Server) handleHttpReader(readerWriter rw.ReaderWriterCloser) {
 
 func (s *Server) handleReader(readerWriter rw.ReaderWriterCloser) {
 	var (
-		uid int64
-		rid int32
-		ok  bool
+		uid int64 = 1
+		rid int32 = 1
+		// ok  bool
 	)
 
 	defer func() {
@@ -105,9 +121,20 @@ func (s *Server) handleReader(readerWriter rw.ReaderWriterCloser) {
 		s.LeaveRoom(uid)
 	}()
 
-	uid, rid, ok = s.Auth(readerWriter)
-	if !ok {
-		return
+	// uid, rid, ok = s.Auth(readerWriter)
+	// if !ok {
+	// 	return
+	// }
+
+	var buf = make([]byte, 1024)
+	for {
+		n, err := readerWriter.Read(buf)
+		if err != nil {
+			fmt.Println(err)
+			readerWriter.Write([]byte(err.Error()))
+			return
+		}
+		fmt.Println("receive", n, "data")
 	}
 
 	//读取数据
@@ -123,7 +150,7 @@ func (s *Server) hanldePacket(readerWriter rw.ReaderCloser, rid int32, uid int64
 			log.Warn("read buffer error:", err)
 			return
 		}
-		length := utils.BytesToUint32(header[2 : 2+4])
+		length := bi.BytesToInt[uint32](header[2 : 2+4])
 
 		// log.Warn(header)
 

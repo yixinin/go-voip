@@ -3,7 +3,8 @@ package server
 import (
 	"log"
 	"net"
-	"voip/rw"
+
+	"github.com/yixinin/go-voip/rw"
 )
 
 func (s *Server) handleUdp(conn *net.UDPConn) {

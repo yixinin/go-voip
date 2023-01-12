@@ -5,13 +5,11 @@ import (
 	"net"
 	"sync"
 	"time"
-	"voip/config"
-	"voip/protocol"
-	"voip/room"
-	"voip/user"
 
-	"go-lib/registry"
-	"go-lib/registry/etcd"
+	"github.com/yixinin/go-voip/config"
+	"github.com/yixinin/go-voip/protocol"
+	"github.com/yixinin/go-voip/room"
+	"github.com/yixinin/go-voip/user"
 
 	log "github.com/sirupsen/logrus"
 
@@ -35,8 +33,6 @@ type Server struct {
 	rooms map[int32]*room.Room
 	users map[string]*user.User //[token]uid
 
-	Registry        registry.Registry
-	RegistryService *registry.Service
 	// watcher         registry.Watcher
 
 	chatClients map[string]protocol.ChatServiceClient
@@ -55,13 +51,11 @@ type Server struct {
 }
 
 func NewServer(c *config.Config) *Server {
-	var regist = etcd.NewRegistry()
 	var rooms = make(map[int32]*room.Room, 2)
 
 	var s = &Server{
 		rooms:       rooms,
 		config:      c,
-		Registry:    regist,
 		users:       make(map[string]*user.User, 2*10),
 		chatClients: make(map[string]protocol.ChatServiceClient),
 
@@ -87,11 +81,6 @@ func NewServer(c *config.Config) *Server {
 			log.Error(err)
 		}
 	}()
-	s.Registry.Init(
-		registry.Addrs(s.config.EtcdAddr...),
-		registry.Secure(false),
-		// registry.Timeout(10*time.Second),
-	)
 	return s
 }
 

@@ -1,9 +1,10 @@
 package server
 
 import (
-	"go-lib/utils"
 	"strings"
-	"voip/rw"
+
+	"github.com/yixinin/go-voip/bi"
+	"github.com/yixinin/go-voip/rw"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -17,7 +18,7 @@ func (s *Server) Auth(readerWriter rw.ReaderWriterCloser) (uid int64, rid int32,
 	}
 
 	var token = strings.TrimSpace(string(header[2 : 32+2]))
-	rid = utils.BytesToInt32(header[32+2:])
+	rid = bi.BytesToInt[int32](header[32+2:])
 
 	u, ok := s.GetUser(token)
 	if !ok { //鉴权
@@ -30,7 +31,7 @@ func (s *Server) Auth(readerWriter rw.ReaderWriterCloser) (uid int64, rid int32,
 		log.Warnf("access denied, uid:%d", uid)
 		return
 	}
-	if _, ok = readerWriter.(*rw.HttpReaderWriter); ok {
+	if _, ok = readerWriter.(*rw.HttpWriter); ok {
 		_, ok = r.Users[uid]
 		return
 	}

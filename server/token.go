@@ -1,8 +1,8 @@
 package server
 
 import (
-	"voip/protocol"
-	"voip/user"
+	"github.com/yixinin/go-voip/protocol"
+	"github.com/yixinin/go-voip/user"
 
 	log "github.com/sirupsen/logrus"
 )

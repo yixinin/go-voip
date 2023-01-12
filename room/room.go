@@ -5,11 +5,12 @@ import (
 	"net"
 	"sync"
 	"time"
-	"voip/av"
-	"voip/cache"
-	"voip/protocol"
-	"voip/rw"
-	"voip/user"
+
+	"github.com/yixinin/go-voip/av"
+	"github.com/yixinin/go-voip/cache"
+	"github.com/yixinin/go-voip/protocol"
+	"github.com/yixinin/go-voip/rw"
+	"github.com/yixinin/go-voip/user"
 )
 
 type Room struct {

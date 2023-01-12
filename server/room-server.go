@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
-	"go-lib/utils"
-	"voip/config"
-	"voip/protocol"
+
+	"github.com/yixinin/go-voip/config"
+	"github.com/yixinin/go-voip/id"
+	"github.com/yixinin/go-voip/protocol"
 )
 
 type RoomServer struct {
@@ -34,7 +35,7 @@ func (s *RoomServer) CreateRoom(ctx context.Context, req *protocol.CreateRoomReq
 		Code: 200,
 		Msg:  "Success",
 	}
-	var rid = utils.GetRoomID()
+	var rid = id.GenTempID()
 	s.createRoomCh <- CreateRoom{
 		Users:  req.Users,
 		RoomId: rid,

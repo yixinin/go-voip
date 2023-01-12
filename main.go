@@ -1,23 +1,33 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	"go-lib/ip"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/signal"
 	"strings"
-	"voip/config"
-	"voip/server"
+	"time"
+
+	"github.com/sirupsen/logrus"
+	"github.com/yixinin/go-voip/config"
+	"github.com/yixinin/go-voip/server"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 var (
 	configPath = flag.String("conf", `config/app.yaml`, "-conf=xxx")
 )
 
 func main() {
+	var ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
 	var conf, err = config.ParseConfig(*configPath)
 	if err != nil {
 		log.Fatalf("load config error: %v", err)
@@ -33,24 +43,26 @@ func main() {
 	}
 
 	//监听退出信号
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	//监听所有信号
 	signal.Notify(c)
-
+	defer server.Shutdown()
 	for {
 		select {
+		case <-ctx.Done():
+			return
 		case sig := <-c:
 			switch sig {
 			case os.Interrupt:
-				server.Shutdown()
+				return
 			}
-			return
+			logrus.Info("receive sig", sig)
 		}
 	}
 }
 
 func showIP(port string) {
-	log.Println("本机IP:", ip.GetAddr(port))
+	// log.Println("本机IP:", ip.GetAddr(port))
 }
 
 func createRoom(port string) {
